@@ -6,6 +6,5 @@ namespace olx_be_api.Models
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
-        public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }
