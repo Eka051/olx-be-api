@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using olx_be_api.Helpers;
 using olx_be_api.Models;
 
 namespace olx_be_api.Data
@@ -10,6 +11,7 @@ namespace olx_be_api.Data
         // User & AuthSession
         public DbSet<User> Users { get; set; }
         public DbSet<AuthSession> AuthSessions { get; set; }
+        public DbSet<EmailOtp> EmailOtps { get; set; }
 
         // Product & Category
         public DbSet<Category> Categories { get; set; }
@@ -29,9 +31,11 @@ namespace olx_be_api.Data
         public DbSet<Province> Provinces { get; set; }
         public DbSet<City> Cities { get; set; }
         public DbSet<District> Districts { get; set; }
+        public DbSet<Location> Locations { get; set; }
 
         // Notifications
         public DbSet<Notification> Notifications { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -45,6 +49,18 @@ namespace olx_be_api.Data
                 entity.HasIndex(u => new { u.ProviderUid, u.AuthProvider }).IsUnique();
             });
 
+            // AuthSession & Email
+            modelBuilder.Entity<AuthSession>()
+                .HasOne(a => a.User)
+                .WithMany(u => u.AuthSessions)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EmailOtp>().HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // Product & ProductImage
             modelBuilder.Entity<Product>()
                 .HasMany(p => p.ProductImages)
@@ -55,31 +71,33 @@ namespace olx_be_api.Data
             // Product & User (Seller)
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.User)
-                .WithMany()
+                .WithMany(u => u.Products)
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Product & Category
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.Category)
-                .WithMany(c => c.Products)
+                .WithMany()
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             // Product & Location (Owned Entity)
             modelBuilder.Entity<Product>()
-                .OwnsOne(p => p.Location);
+                .HasOne(p => p.Location)
+                .WithMany(l => l.Products)
+                .HasForeignKey(p => p.LocationId)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            // ProductImage required fields
             modelBuilder.Entity<ProductImage>()
                 .Property(pi => pi.ImageUrl)
                 .IsRequired();
 
             modelBuilder.Entity<ChatRoom>()
-            .HasOne(cr => cr.Buyer)
-            .WithMany(u => u.BuyerChatRooms)
-            .HasForeignKey(cr => cr.BuyerId)
-            .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(cr => cr.Buyer)
+                .WithMany(u => u.BuyerChatRooms)
+                .HasForeignKey(cr => cr.BuyerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ChatRoom>()
                 .HasOne(cr => cr.Seller)
@@ -115,7 +133,6 @@ namespace olx_be_api.Data
             modelBuilder.Entity<Notification>()
                 .Property(n => n.CreatedAt);
 
-
             // CartItem & Product
             modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.Product)
@@ -129,7 +146,10 @@ namespace olx_be_api.Data
                 .WithMany(u => u.CartItems)
                 .HasForeignKey(ci => ci.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.UseSnakeCase();
         }
+
     }
 
 }
