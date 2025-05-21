@@ -4,76 +4,60 @@ using olx_be_api.DTO;
 using olx_be_api.Helpers;
 using olx_be_api.Models;
 using Microsoft.EntityFrameworkCore;
+using FirebaseAdmin.Auth;
 
 namespace olx_be_api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly AuthHelper _authHelper;
+        public readonly IConfiguration _config;
 
-        public AuthController(AppDbContext context, AuthHelper authHelper)
+        public AuthController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
-            _authHelper = authHelper;
+            _config = configuration;
         }
 
-        [HttpPost("register")]
-        public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto registerDto)
+        [HttpPost("firebase-login")]
+        public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
+            try
             {
-                return BadRequest("Email already exists");
+                var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
+                var uid = decodedToken.Uid;
+
+                var firebasUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == firebasUser.ProviderId);
+
+                if (user == null)
+                {
+                    user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = firebasUser.DisplayName,
+                        Email = firebasUser.Email,
+                        PhoneNumber = firebasUser.PhoneNumber,
+                        ProfilePictureUrl = firebasUser.PhotoUrl,
+                        AuthProvider = firebasUser.ProviderId,
+                        ProviderUid = uid,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                }
+                JwtHelper jwtHelper = new JwtHelper(_config);
+                var token = jwtHelper.GenerateJwtToken(user);
+
             }
-
-            var user = new User
+            catch (Exception ex)
             {
-                Name = registerDto.Name,
-                Email = registerDto.Email,
-                PasswordHash = _authHelper.HashPassword(registerDto.Password),
-                PhoneNumber = registerDto.PhoneNumber
-            };
-
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            var token = _authHelper.GenerateJwtToken(user);
-
-            return new AuthResponseDto
-            {
-                UserId = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Token = token
-            };
+                return BadRequest(new { message = "Firebase login failed", error = ex.Message });
+            }
         }
 
-        [HttpPost("login")]
-        public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
-            
-            if (user == null)
-            {
-                return Unauthorized("Invalid email or password");
-            }
-
-            if (!_authHelper.VerifyPassword(loginDto.Password, user.PasswordHash))
-            {
-                return Unauthorized("Invalid email or password");
-            }
-
-            var token = _authHelper.GenerateJwtToken(user);
-
-            return new AuthResponseDto
-            {
-                UserId = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Token = token
-            };
-        }
     }
 }
