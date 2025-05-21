@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using olx_be_api.Helpers;
 using olx_be_api.Models;
 
 namespace olx_be_api.Data
@@ -10,6 +11,7 @@ namespace olx_be_api.Data
         // User & AuthSession
         public DbSet<User> Users { get; set; }
         public DbSet<AuthSession> AuthSessions { get; set; }
+        public DbSet<EmailOtp> EmailOtps { get; set; }
 
         // Product & Category
         public DbSet<Category> Categories { get; set; }
@@ -44,6 +46,18 @@ namespace olx_be_api.Data
                 entity.HasIndex(u => u.PhoneNumber).IsUnique();
                 entity.HasIndex(u => new { u.ProviderUid, u.AuthProvider }).IsUnique();
             });
+
+            // AuthSession & Email
+            modelBuilder.Entity<AuthSession>()
+                .HasOne(a => a.User)
+                .WithMany(u => u.AuthSessions)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EmailOtp>().HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Product & ProductImage
             modelBuilder.Entity<Product>()
@@ -129,7 +143,10 @@ namespace olx_be_api.Data
                 .WithMany(u => u.CartItems)
                 .HasForeignKey(ci => ci.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.UseSnakeCase();
         }
+
     }
 
 }

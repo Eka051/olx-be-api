@@ -1,4 +1,4 @@
-﻿namespace olx_be_api.Models
+﻿namespace olx_be_api.DTO
 {
     public class FirebaseLoginRequest
     {

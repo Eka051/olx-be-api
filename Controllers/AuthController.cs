@@ -52,10 +52,23 @@ namespace olx_be_api.Controllers
                 JwtHelper jwtHelper = new JwtHelper(_config);
                 var token = jwtHelper.GenerateJwtToken(user);
 
+                return Ok(new
+                {
+                    token = token,
+                    user = new
+                    {
+                        user.Id,
+                        user.Name,
+                        user.Email,
+                        user.PhoneNumber,
+                        user.ProfilePictureUrl
+                    }
+                });
+
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = "Firebase login failed", error = ex.Message });
+                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
             }
         }
 

@@ -6,6 +6,8 @@ using FirebaseAdmin;
 using Microsoft.EntityFrameworkCore; 
 using System.Text;
 using Google.Apis.Auth.OAuth2;
+using API_Manajemen_Barang.Middleware;
+using olx_be_api.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,10 +17,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-FirebaseApp.Create(new AppOptions()
-{
-    Credential = GoogleCredential.FromFile(builder.Configuration["Firebase:CredentialsPath"]!)
-});
+FirebaseAppHelper.Initialize();
+
 builder.Services.AddSwaggerGen(
     option =>
     {
@@ -37,6 +37,7 @@ builder.Services.AddSwaggerGen(
             BearerFormat = "JWT",
             Scheme = "Bearer"
         });
+
 
         option.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -62,11 +63,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
             ValidateLifetime = true,
-
+            ClockSkew = TimeSpan.Zero
         };
+
     });
 
 var app = builder.Build();
@@ -82,7 +86,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseMiddleware<ErrorHandlingMiddleware>();
 app.MapControllers();
 
 app.Run();
