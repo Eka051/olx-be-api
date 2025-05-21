@@ -31,9 +31,11 @@ namespace olx_be_api.Data
         public DbSet<Province> Provinces { get; set; }
         public DbSet<City> Cities { get; set; }
         public DbSet<District> Districts { get; set; }
+        public DbSet<Location> Locations { get; set; }
 
         // Notifications
         public DbSet<Notification> Notifications { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -69,31 +71,33 @@ namespace olx_be_api.Data
             // Product & User (Seller)
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.User)
-                .WithMany()
+                .WithMany(u => u.Products)
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Product & Category
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.Category)
-                .WithMany(c => c.Products)
+                .WithMany()
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             // Product & Location (Owned Entity)
             modelBuilder.Entity<Product>()
-                .OwnsOne(p => p.Location);
+                .HasOne(p => p.Location)
+                .WithMany(l => l.Products)
+                .HasForeignKey(p => p.LocationId)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            // ProductImage required fields
             modelBuilder.Entity<ProductImage>()
                 .Property(pi => pi.ImageUrl)
                 .IsRequired();
 
             modelBuilder.Entity<ChatRoom>()
-            .HasOne(cr => cr.Buyer)
-            .WithMany(u => u.BuyerChatRooms)
-            .HasForeignKey(cr => cr.BuyerId)
-            .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(cr => cr.Buyer)
+                .WithMany(u => u.BuyerChatRooms)
+                .HasForeignKey(cr => cr.BuyerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ChatRoom>()
                 .HasOne(cr => cr.Seller)
@@ -128,7 +132,6 @@ namespace olx_be_api.Data
 
             modelBuilder.Entity<Notification>()
                 .Property(n => n.CreatedAt);
-
 
             // CartItem & Product
             modelBuilder.Entity<CartItem>()

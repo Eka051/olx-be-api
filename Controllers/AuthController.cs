@@ -13,64 +13,90 @@ namespace olx_be_api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        public readonly IConfiguration _config;
+        //public readonly IConfiguration _config;
+        private readonly JwtHelper _jwtHelper;
 
-        public AuthController(AppDbContext context, IConfiguration configuration)
+        public AuthController(AppDbContext context, JwtHelper jwtHelper)
         {
             _context = context;
-            _config = configuration;
+            _jwtHelper = jwtHelper;
         }
 
         [HttpPost("firebase-login")]
         public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+            }
+
             try
             {
-                var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
-                var uid = decodedToken.Uid;
-
-                var firebasUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == firebasUser.ProviderId);
-
-                if (user == null)
+                FirebaseToken decodedToken;
+                try
                 {
-                    user = new User
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = firebasUser.DisplayName,
-                        Email = firebasUser.Email,
-                        PhoneNumber = firebasUser.PhoneNumber,
-                        ProfilePictureUrl = firebasUser.PhotoUrl,
-                        AuthProvider = firebasUser.ProviderId,
-                        ProviderUid = uid,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    _context.Users.Add(user);
-                    await _context.SaveChangesAsync();
-                }
-                JwtHelper jwtHelper = new JwtHelper(_config);
-                var token = jwtHelper.GenerateJwtToken(user);
+                    decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
+                    var uid = decodedToken.Uid;
 
-                return Ok(new
-                {
-                    token = token,
-                    user = new
+                    var firebasUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
+                    var user = await _context.Users
+                        .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == firebasUser.ProviderId);
+
+                    if (user == null)
                     {
-                        user.Id,
-                        user.Name,
-                        user.Email,
-                        user.PhoneNumber,
-                        user.ProfilePictureUrl
+                        user = new User
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = firebasUser.DisplayName,
+                            Email = firebasUser.Email,
+                            PhoneNumber = firebasUser.PhoneNumber,
+                            ProfilePictureUrl = firebasUser.PhotoUrl,
+                            AuthProvider = firebasUser.ProviderId,
+                            ProviderUid = uid,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.Users.Add(user);
+                        await _context.SaveChangesAsync();
                     }
-                });
+                    var token = _jwtHelper.GenerateJwtToken(user);
+                    return Ok(token);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
+                }
 
-            }
-            catch (Exception ex)
+            } catch (Exception ex)
             {
                 return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
             }
+
+            
         }
+
+        [HttpPost("email-otp")]
+        public async Task<IActionResult> LoginWithEmailOtp([FromBody] EmailOtpRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    Name = request.Email.Split('@')[0],
+                    Email = request.Email,
+                    AuthProvider = "email",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+
+            var token = _jwtHelper.GenerateJwtToken(user);
+            return Ok(new { token });
+        }
+
 
     }
 }
