@@ -4,76 +4,99 @@ using olx_be_api.DTO;
 using olx_be_api.Helpers;
 using olx_be_api.Models;
 using Microsoft.EntityFrameworkCore;
+using FirebaseAdmin.Auth;
 
 namespace olx_be_api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly AuthHelper _authHelper;
+        //public readonly IConfiguration _config;
+        private readonly JwtHelper _jwtHelper;
 
-        public AuthController(AppDbContext context, AuthHelper authHelper)
+        public AuthController(AppDbContext context, JwtHelper jwtHelper)
         {
             _context = context;
-            _authHelper = authHelper;
+            _jwtHelper = jwtHelper;
         }
 
-        [HttpPost("register")]
-        public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto registerDto)
+        [HttpPost("firebase-login")]
+        public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
+            if (!ModelState.IsValid)
             {
-                return BadRequest("Email already exists");
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
             }
 
-            var user = new User
+            try
             {
-                Name = registerDto.Name,
-                Email = registerDto.Email,
-                PasswordHash = _authHelper.HashPassword(registerDto.Password),
-                PhoneNumber = registerDto.PhoneNumber
-            };
+                FirebaseToken decodedToken;
+                try
+                {
+                    decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
+                    var uid = decodedToken.Uid;
 
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
+                    var firebasUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
+                    var user = await _context.Users
+                        .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == firebasUser.ProviderId);
 
-            var token = _authHelper.GenerateJwtToken(user);
+                    if (user == null)
+                    {
+                        user = new User
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = firebasUser.DisplayName,
+                            Email = firebasUser.Email,
+                            PhoneNumber = firebasUser.PhoneNumber,
+                            ProfilePictureUrl = firebasUser.PhotoUrl,
+                            AuthProvider = firebasUser.ProviderId,
+                            ProviderUid = uid,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.Users.Add(user);
+                        await _context.SaveChangesAsync();
+                    }
+                    var token = _jwtHelper.GenerateJwtToken(user);
+                    return Ok(token);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
+                }
 
-            return new AuthResponseDto
+            } catch (Exception ex)
             {
-                UserId = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Token = token
-            };
+                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
+            }
+
+            
         }
 
-        [HttpPost("login")]
-        public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
+        [HttpPost("email-otp")]
+        public async Task<IActionResult> LoginWithEmailOtp([FromBody] EmailOtpRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
-            
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
             if (user == null)
             {
-                return Unauthorized("Invalid email or password");
+                user = new User
+                {
+                    Name = request.Email.Split('@')[0],
+                    Email = request.Email,
+                    AuthProvider = "email",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
             }
 
-            if (!_authHelper.VerifyPassword(loginDto.Password, user.PasswordHash))
-            {
-                return Unauthorized("Invalid email or password");
-            }
-
-            var token = _authHelper.GenerateJwtToken(user);
-
-            return new AuthResponseDto
-            {
-                UserId = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Token = token
-            };
+            var token = _jwtHelper.GenerateJwtToken(user);
+            return Ok(new { token });
         }
+
+
     }
 }
