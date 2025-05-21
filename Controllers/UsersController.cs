@@ -15,9 +15,9 @@ namespace olx_be_api.Controllers
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly AuthHelper _authHelper;
+        private readonly JwtHelper _authHelper;
 
-        public UsersController(AppDbContext context, AuthHelper authHelper)
+        public UsersController(AppDbContext context, JwtHelper authHelper)
         {
             _context = context;
             _authHelper = authHelper;

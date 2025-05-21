@@ -1,39 +1,28 @@
 using Microsoft.IdentityModel.Tokens;
-using olx_be_api.DTO;
 using olx_be_api.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace olx_be_api.Helpers
 {
-    public class AuthHelper
+    public class JwtHelper
     {
         private readonly IConfiguration _configuration;
 
-        public AuthHelper(IConfiguration configuration)
+        public JwtHelper(IConfiguration configuration)
         {
             _configuration = configuration;
-        }
-
-        public string HashPassword(string password)
-        {
-            return BCrypt.Net.BCrypt.HashPassword(password);
-        }
-
-        public bool VerifyPassword(string password, string hash)
-        {
-            return BCrypt.Net.BCrypt.Verify(password, hash);
         }
 
         public string GenerateJwtToken(User user)
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Email, user.Email)
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Name, user.Name ?? "User"),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
@@ -44,8 +33,10 @@ namespace olx_be_api.Helpers
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(7),
-                SigningCredentials = creds
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = creds,
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"]
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
