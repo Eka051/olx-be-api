@@ -14,11 +14,13 @@ namespace olx_be_api.Controllers
     {
         private readonly AppDbContext _context;
         private readonly JwtHelper _jwtHelper;
+        private readonly IEmailHelper _emailHelper;
 
-        public AuthController(AppDbContext context, JwtHelper jwtHelper)
+        public AuthController(AppDbContext context, JwtHelper jwtHelper, IEmailHelper emailHelper)
         {
             _context = context;
             _jwtHelper = jwtHelper;
+            _emailHelper = emailHelper;
         }
 
         [HttpPost("firebase-login")]
@@ -132,7 +134,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost("send-email-otp")]
-        public async Task<IActionResult> LoginWithEmailOtp([FromBody] EmailOtpRequest request)
+        public async Task<IActionResult> SendEmailOTP([FromBody] EmailOtpRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -180,11 +182,60 @@ namespace olx_be_api.Controllers
             try
             {
                 string emailSubject = "Kode Verifikasi Akun OLX";
-                string message = $"Kode OTP Anda adalah: <b>{otpCode}</b><br>Silakan masukkan kode ini untuk melanjutkan proses login Anda. Kode ini berlaku selama 10 menit.";
+                string emailMessage = $"Kode OTP Anda adalah: <b>{otpCode}</b><br>Silakan masukkan kode ini untuk melanjutkan proses login Anda. Kode ini berlaku selama 10 menit.";
+                await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
+
+                return Ok(new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
             } catch (Exception ex)
             {
+                _context.EmailOtps.Remove(emailOtp);
+                await _context.SaveChangesAsync();
                 return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.Message });
             }
+        }
+
+        [HttpPost("verify-email-otp")]
+        public async Task<IActionResult> VerifyEmailOtp([FromBody] EmailOtpVerify request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
+            }
+
+            var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
+            if (emailOtp == null)
+            {
+                return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
+            }
+
+            emailOtp.IsUsed = true;
+            _context.EmailOtps.Update(emailOtp);
+            await _context.SaveChangesAsync();
+
+            var token = _jwtHelper.GenerateJwtToken(user);
+            return Ok(new LoginResponseDTO
+            {
+                Success = true,
+                Message = "OTP berhasil diverifikasi",
+                Token = token,
+                User = new User
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    ProfilePictureUrl = user.ProfilePictureUrl,
+                    AuthProvider = user.AuthProvider,
+                    ProviderUid = user.ProviderUid,
+                    CreatedAt = user.CreatedAt
+                }
+            });
         }
 
 
