@@ -9,7 +9,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: 'olx-api'
   DOTNET_VERSION: '9.x'
-  PROJECT_PATH: 'olx_be_api.csproj'
+  PROJECT_PATH: 'eka051/olx-be-api/olx-be-api-2963967a22907240fdb3af3b0552c627dfd54abd/olx_be_api.csproj'
   PUBLISH_DIR: 'publish_output'
 
 jobs:
