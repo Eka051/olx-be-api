@@ -12,8 +12,8 @@ using olx_be_api.Data;
 namespace olx_be_api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250521074246_DBmigration")]
-    partial class DBmigration
+    [Migration("20250525015434_DBMigrations")]
+    partial class DBMigrations
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

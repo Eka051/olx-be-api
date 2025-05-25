@@ -23,7 +23,7 @@ namespace olx_be_api.Controllers
             _emailHelper = emailHelper;
         }
 
-        [HttpPost("firebase-login")]
+        [HttpPost("firebase")]
         public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
             if (!ModelState.IsValid)
@@ -133,13 +133,23 @@ namespace olx_be_api.Controllers
             
         }
 
-        [HttpPost("send-email-otp")]
+        [HttpPost("email-otps")]
         public async Task<IActionResult> SendEmailOTP([FromBody] EmailOtpRequest request)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
             }
+
+            var recentOtp = await _context.EmailOtps
+               .Where(o => o.Email == request.Email && o.CreatedAt > DateTime.UtcNow.AddMinutes(-1))
+               .FirstOrDefaultAsync();
+
+            if (recentOtp != null)
+            {
+                return BadRequest(new { success = false, message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi." });
+            }
+
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
 
@@ -182,7 +192,17 @@ namespace olx_be_api.Controllers
             try
             {
                 string emailSubject = "Kode Verifikasi Akun OLX";
-                string emailMessage = $"Kode OTP Anda adalah: <b>{otpCode}</b><br>Silakan masukkan kode ini untuk melanjutkan proses login Anda. Kode ini berlaku selama 10 menit.";
+                string emailMessage = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif; padding: 20px;'>
+                    <h2>Verifikasi Akun OLX</h2>
+                    <p>Kode OTP Anda adalah:</p>
+                    <h1 style='color: #4285f4; font-size: 32px; letter-spacing: 2px; padding: 10px; background-color: #f1f1f1; display: inline-block; border-radius: 5px;'>{otpCode}</h1>
+                    <p>Silakan masukkan kode ini untuk melanjutkan proses login Anda.</p>
+                    <p>Kode ini berlaku selama 10 menit.</p>
+                    <p>Jika Anda tidak meminta kode ini, silakan abaikan email ini.</p>
+                </body>
+                </html>";
                 await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
 
                 return Ok(new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
@@ -194,7 +214,7 @@ namespace olx_be_api.Controllers
             }
         }
 
-        [HttpPost("verify-email-otp")]
+        [HttpPost("email-verifications")]
         public async Task<IActionResult> VerifyEmailOtp([FromBody] EmailOtpVerify request)
         {
             if (!ModelState.IsValid)
