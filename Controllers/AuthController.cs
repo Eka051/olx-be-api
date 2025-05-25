@@ -159,6 +159,7 @@ namespace olx_be_api.Controllers
                     Name = request.Email.Split("@")[0],
                     Email = request.Email,
                     AuthProvider = "email",
+                    ProviderUid = request.Email.ToLowerInvariant(),
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.Add(user);
