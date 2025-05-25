@@ -12,8 +12,8 @@ using olx_be_api.Data;
 namespace olx_be_api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250525015434_DBMigrations")]
-    partial class DBMigrations
+    [Migration("20250525133321_NewMigrations")]
+    partial class NewMigrations
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -292,6 +292,10 @@ namespace olx_be_api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
