@@ -1,6 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy ASP.Net Core app to Azure Web App - olx-api
 
 on:
@@ -9,11 +6,17 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: 'olx-api'
+  DOTNET_VERSION: '9.x'
+  PROJECT_PATH: 'olx_be_api.csproj'
+  PUBLISH_DIR: 'publish_output'
+
 jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -21,19 +24,33 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release
+
+      - name: Install dotnet-ef tool
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Add dotnet-ef to PATH
+        run: |
+          $DOTNET_TOOLS_PATH = "$env:USERPROFILE\.dotnet\tools"
+          echo "$DOTNET_TOOLS_PATH" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Run database migrations
+        run: dotnet ef database update --connection "${{ secrets.DB_CONNECTION_STRING_MIGRATION }}" --project "${{ env.PROJECT_PATH }}" --startup-project "${{ env.PROJECT_PATH }}" --verbose
+        env:
+          DB_CONNECTION_STRING_MIGRATION: ${{ secrets.DB_CONNECTION_STRING_MIGRATION }}
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish "${{ env.PROJECT_PATH }}" -c Release -o "${{env.DOTNET_ROOT}}/${{env.PUBLISH_DIR}}"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{env.DOTNET_ROOT}}/${{env.PUBLISH_DIR}}
 
   deploy:
     runs-on: windows-latest
@@ -42,15 +59,15 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -65,4 +82,3 @@ jobs:
           app-name: 'olx-api'
           slot-name: 'Production'
           package: .
-          
