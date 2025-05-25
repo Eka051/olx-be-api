@@ -180,6 +180,7 @@ namespace olx_be_api.Controllers
                 UserId = user.Id,
                 Email = request.Email,
                 Otp = otpCode,
+                CreatedAt = DateTime.UtcNow,
                 ExpiredAt = otpExpiration,
                 IsUsed = false
             };
