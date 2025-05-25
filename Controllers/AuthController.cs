@@ -13,16 +13,17 @@ namespace olx_be_api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        //public readonly IConfiguration _config;
         private readonly JwtHelper _jwtHelper;
+        private readonly IEmailHelper _emailHelper;
 
-        public AuthController(AppDbContext context, JwtHelper jwtHelper)
+        public AuthController(AppDbContext context, JwtHelper jwtHelper, IEmailHelper emailHelper)
         {
             _context = context;
             _jwtHelper = jwtHelper;
+            _emailHelper = emailHelper;
         }
 
-        [HttpPost("firebase-login")]
+        [HttpPost("firebase")]
         public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
             if (!ModelState.IsValid)
@@ -36,37 +37,95 @@ namespace olx_be_api.Controllers
                 try
                 {
                     decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
-                    var uid = decodedToken.Uid;
+                }
+                catch (FirebaseAuthException ex)
+                {
+                    return Unauthorized(new { success = false, message = "Token Firebase tidak valid", error = ex.Message });
+                }
 
-                    var firebasUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
-                    var user = await _context.Users
-                        .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == firebasUser.ProviderId);
+                var uid = decodedToken.Uid;
+                UserRecord firebaseUser;
+                try
+                {
+                    firebaseUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
+                }
+                catch (FirebaseAuthException ex)
+                {
+                    return NotFound(new { success = false, message = "Pengguna tidak ditemukan di Firebase", error = ex.Message });
+                }
 
-                    if (user == null)
+                string authProvider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId ?? "unknown";
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == authProvider);
+
+                if (user == null)
+                {
+                    user = new User
                     {
-                        user = new User
-                        {
-                            Id = Guid.NewGuid(),
-                            Name = firebasUser.DisplayName,
-                            Email = firebasUser.Email,
-                            PhoneNumber = firebasUser.PhoneNumber,
-                            ProfilePictureUrl = firebasUser.PhotoUrl,
-                            AuthProvider = firebasUser.ProviderId,
-                            ProviderUid = uid,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        _context.Users.Add(user);
+                        Id = Guid.NewGuid(),
+                        Name = firebaseUser.DisplayName,
+                        Email = firebaseUser.Email,
+                        PhoneNumber = firebaseUser.PhoneNumber,
+                        ProfilePictureUrl = firebaseUser.PhotoUrl,
+                        AuthProvider = authProvider,
+                        ProviderUid = uid,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Add(user);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    bool needsUpdate = false;
+                    if (user.Name != firebaseUser.DisplayName)
+                    {
+                        user.Name = firebaseUser.DisplayName;
+                        needsUpdate = true;
+                    }
+                    if (user.Email != firebaseUser.Email)
+                    {
+                        user.Email = firebaseUser.Email;
+                        needsUpdate = true;
+                    }
+                    if (user.PhoneNumber != firebaseUser.PhoneNumber)
+                    {
+                        user.PhoneNumber = firebaseUser.PhoneNumber;
+                        needsUpdate = true;
+                    }
+                    if (user.ProfilePictureUrl != firebaseUser.PhotoUrl)
+                    {
+                        user.ProfilePictureUrl = firebaseUser.PhotoUrl;
+                        needsUpdate = true;
+                    }
+
+                    if (needsUpdate)
+                    {
+                        _context.Update(user);
                         await _context.SaveChangesAsync();
                     }
-                    var token = _jwtHelper.GenerateJwtToken(user);
-                    return Ok(token);
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
                 }
 
-            } catch (Exception ex)
+                var token = _jwtHelper.GenerateJwtToken(user);
+                return Ok(new LoginResponseDTO 
+                {
+                    Success = true,
+                    Message = "Login Berhasil",
+                    Token = token,
+                    User = new User
+                    {
+                        Id = user.Id,
+                        Name = user.Name,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+                        ProfilePictureUrl = user.ProfilePictureUrl,
+                        AuthProvider = user.AuthProvider,
+                        ProviderUid = user.ProviderUid,
+                        CreatedAt = user.CreatedAt
+                    }
+
+                });
+
+            }
+            catch (Exception ex)
             {
                 return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
             }
@@ -74,27 +133,129 @@ namespace olx_be_api.Controllers
             
         }
 
-        [HttpPost("email-otp")]
-        public async Task<IActionResult> LoginWithEmailOtp([FromBody] EmailOtpRequest request)
+        [HttpPost("email-otps")]
+        public async Task<IActionResult> SendEmailOTP([FromBody] EmailOtpRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+            }
+
+            var recentOtp = await _context.EmailOtps
+               .Where(o => o.Email == request.Email && o.CreatedAt > DateTime.UtcNow.AddMinutes(-1))
+               .FirstOrDefaultAsync();
+
+            if (recentOtp != null)
+            {
+                return BadRequest(new { success = false, message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi." });
+            }
+
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
 
             if (user == null)
             {
                 user = new User
                 {
-                    Name = request.Email.Split('@')[0],
+                    Id = Guid.NewGuid(),
+                    Name = request.Email.Split("@")[0],
                     Email = request.Email,
                     AuthProvider = "email",
+                    ProviderUid = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow
                 };
-
-                _context.Users.Add(user);
+                _context.Add(user);
                 await _context.SaveChangesAsync();
             }
+            
+            var existingOTPs = _context.EmailOtps.Where(o => o.UserId == user.Id && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
+            if (existingOTPs.Any())
+            {
+                _context.EmailOtps.RemoveRange(existingOTPs);
+            }
+
+            var otpCode = new Random().Next(100000, 999999).ToString();
+            var otpExpiration = DateTime.UtcNow.AddMinutes(10);
+
+            var emailOtp = new EmailOtp
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Email = request.Email,
+                Otp = otpCode,
+                ExpiredAt = otpExpiration,
+                IsUsed = false
+            };
+            _context.EmailOtps.Add(emailOtp);
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                string emailSubject = "Kode Verifikasi Akun OLX";
+                string emailMessage = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif; padding: 20px;'>
+                    <h2>Verifikasi Akun OLX</h2>
+                    <p>Kode OTP Anda adalah:</p>
+                    <h1 style='color: #4285f4; font-size: 32px; letter-spacing: 2px; padding: 10px; background-color: #f1f1f1; display: inline-block; border-radius: 5px;'>{otpCode}</h1>
+                    <p>Silakan masukkan kode ini untuk melanjutkan proses login Anda.</p>
+                    <p>Kode ini berlaku selama 10 menit.</p>
+                    <p>Jika Anda tidak meminta kode ini, silakan abaikan email ini.</p>
+                </body>
+                </html>";
+                await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
+
+                return Ok(new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
+            } catch (Exception ex)
+            {
+                _context.EmailOtps.Remove(emailOtp);
+                await _context.SaveChangesAsync();
+                return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.Message });
+            }
+        }
+
+        [HttpPost("email-verifications")]
+        public async Task<IActionResult> VerifyEmailOtp([FromBody] EmailOtpVerify request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
+            }
+
+            var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
+            if (emailOtp == null)
+            {
+                return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
+            }
+
+            emailOtp.IsUsed = true;
+            _context.EmailOtps.Update(emailOtp);
+            await _context.SaveChangesAsync();
 
             var token = _jwtHelper.GenerateJwtToken(user);
-            return Ok(new { token });
+            return Ok(new LoginResponseDTO
+            {
+                Success = true,
+                Message = "OTP berhasil diverifikasi",
+                Token = token,
+                User = new User
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    ProfilePictureUrl = user.ProfilePictureUrl,
+                    AuthProvider = user.AuthProvider,
+                    ProviderUid = user.ProviderUid,
+                    CreatedAt = user.CreatedAt
+                }
+            });
         }
 
 
