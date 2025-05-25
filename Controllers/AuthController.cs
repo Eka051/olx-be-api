@@ -124,7 +124,7 @@ namespace olx_be_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
+                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.InnerException?.Message ?? ex.Message });
             }
 
             
@@ -155,6 +155,7 @@ namespace olx_be_api.Controllers
             {
                 user = new User
                 {
+                    Id = Guid.NewGuid(),
                     Name = request.Email.Split("@")[0],
                     Email = request.Email,
                     AuthProvider = "email",
@@ -206,43 +207,53 @@ namespace olx_be_api.Controllers
             {
                 _context.EmailOtps.Remove(emailOtp);
                 await _context.SaveChangesAsync();
-                return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.Message });
+                return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.InnerException?.Message ?? ex.Message });
             }
         }
 
         [HttpPost("email-verifications")]
         public async Task<IActionResult> VerifyEmailOtp([FromBody] EmailOtpVerify request)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Otp))
+                {
+                    return BadRequest(new { success = false, message = "Email dan OTP harus diisi" });
+                }
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+                }
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
+                if (user == null)
+                {
+                    return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
+                }
+
+                var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
+                if (emailOtp == null)
+                {
+                    return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
+                }
+
+                emailOtp.IsUsed = true;
+                _context.EmailOtps.Update(emailOtp);
+                await _context.SaveChangesAsync();
+
+                var token = _jwtHelper.GenerateJwtToken(user);
+                return Ok(new LoginResponseDTO
+                {
+                    Success = true,
+                    Message = "OTP berhasil diverifikasi",
+                    Token = token,
+                });
             }
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
-            if (user == null)
+            catch (Exception ex)
             {
-                return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ex.InnerException?.Message ?? ex.Message });
             }
-
-            var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
-            if (emailOtp == null)
-            {
-                return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
-            }
-
-            emailOtp.IsUsed = true;
-            _context.EmailOtps.Update(emailOtp);
-            await _context.SaveChangesAsync();
-
-            var token = _jwtHelper.GenerateJwtToken(user);
-            return Ok(new LoginResponseDTO
-            {
-                Success = true,
-                Message = "OTP berhasil diverifikasi",
-                Token = token,
-            });
+            
         }
-
-
     }
 }
