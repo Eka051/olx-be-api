@@ -112,16 +112,13 @@ namespace olx_be_api.Controllers
                     Token = token,
                     User = new User
                     {
-                        Id = user.Id,
                         Name = user.Name,
                         Email = user.Email,
                         PhoneNumber = user.PhoneNumber,
                         ProfilePictureUrl = user.ProfilePictureUrl,
                         AuthProvider = user.AuthProvider,
-                        ProviderUid = user.ProviderUid,
                         CreatedAt = user.CreatedAt
                     }
-
                 });
 
             }
@@ -134,6 +131,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost("email-otps")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> SendEmailOTP([FromBody] EmailOtpRequest request)
         {
             if (!ModelState.IsValid)
@@ -157,11 +155,9 @@ namespace olx_be_api.Controllers
             {
                 user = new User
                 {
-                    Id = Guid.NewGuid(),
                     Name = request.Email.Split("@")[0],
                     Email = request.Email,
                     AuthProvider = "email",
-                    ProviderUid = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.Add(user);
@@ -188,7 +184,7 @@ namespace olx_be_api.Controllers
             };
             _context.EmailOtps.Add(emailOtp);
             await _context.SaveChangesAsync();
-
+            
             try
             {
                 string emailSubject = "Kode Verifikasi Akun OLX";
@@ -205,7 +201,7 @@ namespace olx_be_api.Controllers
                 </html>";
                 await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
 
-                return Ok(new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
+                return StatusCode(StatusCodes.Status201Created, new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
             } catch (Exception ex)
             {
                 _context.EmailOtps.Remove(emailOtp);
@@ -244,17 +240,6 @@ namespace olx_be_api.Controllers
                 Success = true,
                 Message = "OTP berhasil diverifikasi",
                 Token = token,
-                User = new User
-                {
-                    Id = user.Id,
-                    Name = user.Name,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    ProfilePictureUrl = user.ProfilePictureUrl,
-                    AuthProvider = user.AuthProvider,
-                    ProviderUid = user.ProviderUid,
-                    CreatedAt = user.CreatedAt
-                }
             });
         }
 
