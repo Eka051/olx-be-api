@@ -1,7 +1,10 @@
-﻿namespace olx_be_api.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace olx_be_api.Models
 {
     public class EmailOtp
     {
+        [Key]
         public int Id { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Otp { get; set; } = string.Empty;
