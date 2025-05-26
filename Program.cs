@@ -93,10 +93,10 @@ app.UseSwaggerUI(c =>
 });
 
 // Middleware
+app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<ErrorHandlingMiddleware>();
 
 // Map routes
 app.MapControllers();
