@@ -13,6 +13,9 @@ namespace olx_be_api.Models
         public bool IsSold { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public DateTime ExpiredAt { get; set; }
+        public AdPackageType CurrentPackageType { get; set; } = AdPackageType.Standard;
+
         public Category? Category { get; set; }
         public User User { get; set; } = null!;
         public Guid UserId { get; set; }

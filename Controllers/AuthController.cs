@@ -184,7 +184,6 @@ namespace olx_be_api.Controllers
 
             var emailOtp = new EmailOtp
             {
-                Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Email = request.Email,
                 Otp = otpCode,

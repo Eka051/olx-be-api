@@ -8,9 +8,10 @@ namespace olx_be_api.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        // User & AuthSession
+        // User, Email and Roles
         public DbSet<User> Users { get; set; }
-        public DbSet<AuthSession> AuthSessions { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<EmailOtp> EmailOtps { get; set; }
 
         // Product & Category
@@ -49,13 +50,7 @@ namespace olx_be_api.Data
                 entity.HasIndex(u => new { u.ProviderUid, u.AuthProvider }).IsUnique();
             });
 
-            // AuthSession & Email
-            modelBuilder.Entity<AuthSession>()
-                .HasOne(a => a.User)
-                .WithMany(u => u.AuthSessions)
-                .HasForeignKey(a => a.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
+            // Email
             modelBuilder.Entity<EmailOtp>().HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
@@ -146,6 +141,32 @@ namespace olx_be_api.Data
                 .WithMany(u => u.CartItems)
                 .HasForeignKey(ci => ci.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // User & Role
+            modelBuilder.Entity<UserRole>(entity =>
+            {
+                entity.HasKey(ur => new { ur.UserId, ur.RoleId });
+
+                entity.HasOne(ur => ur.User)
+                    .WithMany(u => u.UserRoles)
+                    .HasForeignKey(ur => ur.UserId);
+
+                entity.HasOne(ur => ur.Role)
+                    .WithMany(r => r.UserRoles)
+                    .HasForeignKey(ur => ur.RoleId);
+            });
+
+            modelBuilder.Entity<AdPackage>()
+                .Property(p => p.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.ProfileType)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<AdTransaction>()
+               .Property(t => t.Status)
+               .HasConversion<string>();
 
             modelBuilder.UseSnakeCase();
         }
