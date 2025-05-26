@@ -22,6 +22,7 @@ namespace olx_be_api.Controllers
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<List<CategoryResponseDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult GetAllCategories()
         {
             var categories = _context.Categories.ToList();
@@ -52,6 +53,7 @@ namespace olx_be_api.Controllers
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<CategoryResponseDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse),StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult CreateCategory([FromBody] CreateCategoryDto createCategoryDto)
@@ -96,10 +98,15 @@ namespace olx_be_api.Controllers
                 _context.Categories.Add(newCategory);
                 _context.SaveChanges();
 
-                var response = new CategoryResponseDto
+                var response = new ApiResponse<CategoryResponseDto>
                 {
-                    Id = newCategory.Id,
-                    Name = newCategory.Name
+                    success = true,
+                    message = "Berhasil membuat kategori baru",
+                    data = new CategoryResponseDto
+                    {
+                        Id = newCategory.Id,
+                        Name = newCategory.Name
+                    }
                 };
 
                 return CreatedAtAction(nameof(GetAllCategories), new { id = newCategory.Id }, response);
@@ -119,6 +126,7 @@ namespace olx_be_api.Controllers
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<CategoryResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult UpdateCategory(int id, [FromBody] UpdateCategoryDto updateCategoryDto)
@@ -170,6 +178,8 @@ namespace olx_be_api.Controllers
         [HttpDelete("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteCategory(int id)
