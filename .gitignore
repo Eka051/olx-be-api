@@ -13,6 +13,10 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# firebase-adminSDK
+firebase-adminsdk.json
+appsettings.json
+
 # Mono auto generated files
 mono_crash.*
 

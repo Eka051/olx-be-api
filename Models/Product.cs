@@ -10,13 +10,14 @@ namespace olx_be_api.Models
         public string? Description { get; set; }
         public int Price { get; set; }
         public int? CategoryId { get; set; }
-        public Guid UserId { get; set; }
         public bool IsSold { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public Category? Category { get; set; }
         public User User { get; set; } = null!;
-        public Location Location { get; set; } = new Location();
+        public Guid UserId { get; set; }
+        public Guid? LocationId { get; set; }
+        public Location Location { get; set; } = null!;
         public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
     }
 }

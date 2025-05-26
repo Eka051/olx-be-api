@@ -6,11 +6,11 @@ using System.Text;
 
 namespace olx_be_api.Helpers
 {
-    public class AuthHelper
+    public class JwtHelper
     {
         private readonly IConfiguration _configuration;
 
-        public AuthHelper(IConfiguration configuration)
+        public JwtHelper(IConfiguration configuration)
         {
             _configuration = configuration;
         }
@@ -19,9 +19,10 @@ namespace olx_be_api.Helpers
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Name!),
-                new Claim(ClaimTypes.Email, user.Email!)
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Name, user.Name ?? "User"),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
@@ -32,8 +33,10 @@ namespace olx_be_api.Helpers
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(7),
-                SigningCredentials = creds
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = creds,
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"]
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
