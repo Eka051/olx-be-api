@@ -85,6 +85,21 @@ FirebaseAppHelper.Initialize();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        DataSeeder.SeedDatabase(context);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Terjadi kesalahan saat seed database: {ex.Message}");
+        throw;
+    }
+}
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {

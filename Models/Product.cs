@@ -5,7 +5,7 @@ namespace olx_be_api.Models
 {
     public class Product
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public long Id { get; set; }
         public string Title { get; set; } = null!;
         public string? Description { get; set; }
         public int Price { get; set; }
@@ -22,5 +22,6 @@ namespace olx_be_api.Models
         public Guid? LocationId { get; set; }
         public Location Location { get; set; } = null!;
         public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
+        public ICollection<Favorite> FavoritedBy { get; set; } = new List<Favorite>();
     }
 }
