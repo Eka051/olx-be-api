@@ -7,7 +7,7 @@ namespace olx_be_api.DTO
         [Required]
         public Guid ReceiverId { get; set; }
         
-        public Guid? ProductId { get; set; }
+        public long? ProductId { get; set; }
         
         [Required]
         [MaxLength(2000)]

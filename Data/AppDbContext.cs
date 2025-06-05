@@ -80,6 +80,11 @@ namespace olx_be_api.Data
             modelBuilder.Entity<ProductImage>(entity =>
             {
                 entity.Property(pi => pi.ImageUrl).IsRequired();
+                entity.HasOne(pi => pi.Product)
+                    .WithMany(p => p.ProductImages)
+                    .HasForeignKey(pi => pi.ProductId)
+                    .HasPrincipalKey(p => p.Id)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<ChatRoom>(entity => {
@@ -173,6 +178,7 @@ namespace olx_be_api.Data
                 entity.HasOne(f => f.Product)
                     .WithMany(p => p.FavoritedBy)
                     .HasForeignKey(f => f.ProductId)
+                    .HasPrincipalKey(p => p.Id)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

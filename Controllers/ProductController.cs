@@ -100,6 +100,11 @@ namespace olx_be_api.Controllers
                 //    Images = productDTO.Images ?? new List<string>(),
                 //    CreatedAt = DateTime.UtcNow
                 //};
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Product creation is not implemented yet."
+                });
 
 
             }

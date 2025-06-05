@@ -3,7 +3,7 @@
     public class ChatRoom
     {
         public Guid Id { get; set; }
-        public Guid ProductId { get; set; }
+        public long ProductId { get; set; }
         public Guid BuyerId { get; set; }
         public Guid SellerId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

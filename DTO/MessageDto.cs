@@ -5,19 +5,16 @@ namespace olx_be_api.DTO
 {
     public class CreateMessageDto
     {
-        public int ChatId { get; set; }
-        
-        [MaxLength(2000)]
+        public Guid ChatRoomId { get; set; }
         public string Content { get; set; } = null!;
     }
 
     public class MessageResponseDto
     {
-        public int Id { get; set; }
-        public int ChatId { get; set; }
-        public Guid SenderId { get; set; }
-        public string SenderName { get; set; } = null!;
+        public Guid Id { get; set; }
         public string Content { get; set; } = null!;
+        public Guid SenderId { get; set; }
+        public Guid ChatRoomId { get; set; }
         public bool IsRead { get; set; }
         public DateTime CreatedAt { get; set; }
     }

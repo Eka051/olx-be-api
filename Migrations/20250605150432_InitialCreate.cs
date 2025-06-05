@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace olx_be_api.Migrations
 {
     /// <inheritdoc />
-    public partial class DatabaseMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -232,7 +232,7 @@ namespace olx_be_api.Migrations
                 name: "products",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<long>(type: "bigint", nullable: false),
                     title = table.Column<string>(type: "text", nullable: false),
                     description = table.Column<string>(type: "text", nullable: true),
                     price = table.Column<int>(type: "integer", nullable: false),
@@ -275,7 +275,7 @@ namespace olx_be_api.Migrations
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     ad_package_id = table.Column<int>(type: "integer", nullable: false),
                     quantity = table.Column<int>(type: "integer", nullable: false),
-                    product_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    product_id = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -305,7 +305,7 @@ namespace olx_be_api.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    product_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
                     buyer_id = table.Column<Guid>(type: "uuid", nullable: false),
                     seller_id = table.Column<Guid>(type: "uuid", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -334,11 +334,38 @@ namespace olx_be_api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "favorites",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_favorites", x => x.id);
+                    table.ForeignKey(
+                        name: "f_k_favorites__products_product_id",
+                        column: x => x.product_id,
+                        principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "f_k_favorites__users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "product_images",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    product_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
                     image_url = table.Column<string>(type: "text", nullable: false),
                     is_cover = table.Column<bool>(type: "boolean", nullable: false)
                 },
@@ -469,6 +496,17 @@ namespace olx_be_api.Migrations
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
+                name: "i_x_favorites_product_id",
+                table: "favorites",
+                column: "product_id");
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_favorites_user_id_product_id",
+                table: "favorites",
+                columns: new[] { "user_id", "product_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "i_x_locations_city_id",
                 table: "locations",
                 column: "city_id");
@@ -550,6 +588,9 @@ namespace olx_be_api.Migrations
 
             migrationBuilder.DropTable(
                 name: "email_otps");
+
+            migrationBuilder.DropTable(
+                name: "favorites");
 
             migrationBuilder.DropTable(
                 name: "messages");
