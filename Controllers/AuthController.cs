@@ -24,6 +24,11 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost("firebase")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
             if (!ModelState.IsValid)
@@ -112,28 +117,28 @@ namespace olx_be_api.Controllers
                     Token = token,
                     User = new User
                     {
-                        Id = user.Id,
                         Name = user.Name,
                         Email = user.Email,
                         PhoneNumber = user.PhoneNumber,
                         ProfilePictureUrl = user.ProfilePictureUrl,
                         AuthProvider = user.AuthProvider,
-                        ProviderUid = user.ProviderUid,
                         CreatedAt = user.CreatedAt
                     }
-
                 });
 
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.Message });
+                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.InnerException?.Message ?? ex.Message });
             }
 
             
         }
 
         [HttpPost("email-otps")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> SendEmailOTP([FromBody] EmailOtpRequest request)
         {
             if (!ModelState.IsValid)
@@ -179,16 +184,16 @@ namespace olx_be_api.Controllers
 
             var emailOtp = new EmailOtp
             {
-                Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Email = request.Email,
                 Otp = otpCode,
+                CreatedAt = DateTime.UtcNow,
                 ExpiredAt = otpExpiration,
                 IsUsed = false
             };
             _context.EmailOtps.Add(emailOtp);
             await _context.SaveChangesAsync();
-
+            
             try
             {
                 string emailSubject = "Kode Verifikasi Akun OLX";
@@ -205,59 +210,63 @@ namespace olx_be_api.Controllers
                 </html>";
                 await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
 
-                return Ok(new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
+                return StatusCode(StatusCodes.Status201Created, new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
             } catch (Exception ex)
             {
                 _context.EmailOtps.Remove(emailOtp);
                 await _context.SaveChangesAsync();
-                return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.Message });
+                return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.InnerException?.Message ?? ex.Message });
             }
         }
 
         [HttpPost("email-verifications")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> VerifyEmailOtp([FromBody] EmailOtpVerify request)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
-            }
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
-            if (user == null)
-            {
-                return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
-            }
-
-            var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
-            if (emailOtp == null)
-            {
-                return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
-            }
-
-            emailOtp.IsUsed = true;
-            _context.EmailOtps.Update(emailOtp);
-            await _context.SaveChangesAsync();
-
-            var token = _jwtHelper.GenerateJwtToken(user);
-            return Ok(new LoginResponseDTO
-            {
-                Success = true,
-                Message = "OTP berhasil diverifikasi",
-                Token = token,
-                User = new User
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Otp))
                 {
-                    Id = user.Id,
-                    Name = user.Name,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    ProfilePictureUrl = user.ProfilePictureUrl,
-                    AuthProvider = user.AuthProvider,
-                    ProviderUid = user.ProviderUid,
-                    CreatedAt = user.CreatedAt
+                    return BadRequest(new { success = false, message = "Email dan OTP harus diisi" });
                 }
-            });
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+                }
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
+                if (user == null)
+                {
+                    return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
+                }
+
+                var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
+                if (emailOtp == null)
+                {
+                    return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
+                }
+
+                emailOtp.IsUsed = true;
+                _context.EmailOtps.Update(emailOtp);
+                await _context.SaveChangesAsync();
+
+                var token = _jwtHelper.GenerateJwtToken(user);
+                return Ok(new LoginResponseDTO
+                {
+                    Success = true,
+                    Message = "OTP berhasil diverifikasi",
+                    Token = token,
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ex.InnerException?.Message ?? ex.Message });
+            }
+            
         }
-
-
     }
 }

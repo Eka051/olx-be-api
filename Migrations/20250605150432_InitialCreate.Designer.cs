@@ -12,8 +12,8 @@ using olx_be_api.Data;
 namespace olx_be_api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250525015434_DBMigrations")]
-    partial class DBMigrations
+    [Migration("20250605150432_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -60,10 +60,16 @@ namespace olx_be_api.Migrations
 
             modelBuilder.Entity("olx_be_api.Models.AdTransaction", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer")
+                        .HasColumnName("amount");
 
                     b.Property<Guid>("CartItemId")
                         .HasColumnType("uuid")
@@ -72,6 +78,10 @@ namespace olx_be_api.Migrations
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int>("InvoiceNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("invoice_number");
 
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone")
@@ -103,39 +113,6 @@ namespace olx_be_api.Migrations
                     b.ToTable("ad_transactions");
                 });
 
-            modelBuilder.Entity("olx_be_api.Models.AuthSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime>("ExpiredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expired_at");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("token");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_auth_sessions");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("i_x_auth_sessions_user_id");
-
-                    b.ToTable("auth_sessions");
-                });
-
             modelBuilder.Entity("olx_be_api.Models.CartItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -147,8 +124,8 @@ namespace olx_be_api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("ad_package_id");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
                         .HasColumnName("product_id");
 
                     b.Property<int>("Quantity")
@@ -209,8 +186,8 @@ namespace olx_be_api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
                         .HasColumnName("product_id");
 
                     b.Property<Guid>("SellerId")
@@ -288,10 +265,16 @@ namespace olx_be_api.Migrations
 
             modelBuilder.Entity("olx_be_api.Models.EmailOtp", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -322,6 +305,40 @@ namespace olx_be_api.Migrations
                         .HasDatabaseName("i_x_email_otps_user_id");
 
                     b.ToTable("email_otps");
+                });
+
+            modelBuilder.Entity("olx_be_api.Models.Favorite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("product_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_favorites");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("i_x_favorites_product_id");
+
+                    b.HasIndex("UserId", "ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_favorites_user_id_product_id");
+
+                    b.ToTable("favorites");
                 });
 
             modelBuilder.Entity("olx_be_api.Models.Location", b =>
@@ -446,9 +463,8 @@ namespace olx_be_api.Migrations
 
             modelBuilder.Entity("olx_be_api.Models.Product", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
                         .HasColumnName("id");
 
                     b.Property<int?>("CategoryId")
@@ -459,9 +475,17 @@ namespace olx_be_api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("CurrentPackageType")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_package_type");
+
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
+
+                    b.Property<DateTime>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expired_at");
 
                     b.Property<bool>("IsSold")
                         .HasColumnType("boolean")
@@ -515,8 +539,8 @@ namespace olx_be_api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_cover");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid")
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
                         .HasColumnName("product_id");
 
                     b.HasKey("Id")
@@ -548,6 +572,26 @@ namespace olx_be_api.Migrations
                     b.ToTable("provinces");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.Role", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_roles");
+
+                    b.ToTable("roles");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -576,9 +620,18 @@ namespace olx_be_api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("phone_number");
 
+                    b.Property<DateTime?>("PremiumUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("premium_until");
+
                     b.Property<string>("ProfilePictureUrl")
                         .HasColumnType("text")
                         .HasColumnName("profile_picture_url");
+
+                    b.Property<string>("ProfileType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("profile_type");
 
                     b.Property<string>("ProviderUid")
                         .IsRequired()
@@ -603,6 +656,25 @@ namespace olx_be_api.Migrations
                     b.ToTable("users");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.UserRole", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer")
+                        .HasColumnName("role_id");
+
+                    b.HasKey("UserId", "RoleId")
+                        .HasName("p_k_user_roles");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("i_x_user_roles_role_id");
+
+                    b.ToTable("user_roles");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.AdTransaction", b =>
                 {
                     b.HasOne("olx_be_api.Models.CartItem", "CartItem")
@@ -620,18 +692,6 @@ namespace olx_be_api.Migrations
                         .HasConstraintName("f_k_ad_transactions__users_user_id");
 
                     b.Navigation("CartItem");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("olx_be_api.Models.AuthSession", b =>
-                {
-                    b.HasOne("olx_be_api.Models.User", "User")
-                        .WithMany("AuthSessions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("f_k_auth_sessions__users_user_id");
 
                     b.Navigation("User");
                 });
@@ -728,6 +788,27 @@ namespace olx_be_api.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired()
                         .HasConstraintName("f_k_email_otps__users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("olx_be_api.Models.Favorite", b =>
+                {
+                    b.HasOne("olx_be_api.Models.Product", "Product")
+                        .WithMany("FavoritedBy")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_favorites__products_product_id");
+
+                    b.HasOne("olx_be_api.Models.User", "User")
+                        .WithMany("Favorites")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_favorites__users_user_id");
+
+                    b.Navigation("Product");
 
                     b.Navigation("User");
                 });
@@ -829,6 +910,27 @@ namespace olx_be_api.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.UserRole", b =>
+                {
+                    b.HasOne("olx_be_api.Models.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_user_roles_roles_role_id");
+
+                    b.HasOne("olx_be_api.Models.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_user_roles_users_user_id");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.ChatRoom", b =>
                 {
                     b.Navigation("Messages");
@@ -846,6 +948,8 @@ namespace olx_be_api.Migrations
 
             modelBuilder.Entity("olx_be_api.Models.Product", b =>
                 {
+                    b.Navigation("FavoritedBy");
+
                     b.Navigation("ProductImages");
                 });
 
@@ -854,15 +958,20 @@ namespace olx_be_api.Migrations
                     b.Navigation("cities");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.Role", b =>
+                {
+                    b.Navigation("UserRoles");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.User", b =>
                 {
                     b.Navigation("AdTransactions");
 
-                    b.Navigation("AuthSessions");
-
                     b.Navigation("BuyerChatRooms");
 
                     b.Navigation("CartItems");
+
+                    b.Navigation("Favorites");
 
                     b.Navigation("Notifications");
 
@@ -871,6 +980,8 @@ namespace olx_be_api.Migrations
                     b.Navigation("SellerChatRooms");
 
                     b.Navigation("SentMessages");
+
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }
