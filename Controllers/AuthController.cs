@@ -184,7 +184,6 @@ namespace olx_be_api.Controllers
 
             var emailOtp = new EmailOtp
             {
-                Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Email = request.Email,
                 Otp = otpCode,
@@ -233,6 +232,7 @@ namespace olx_be_api.Controllers
                 {
                     return BadRequest(new { success = false, message = "Email dan OTP harus diisi" });
                 }
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
