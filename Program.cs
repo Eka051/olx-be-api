@@ -12,6 +12,8 @@ using olx_be_api.Services;
 using olx_be_api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IGeocodingService, GoogleGeocodingService>();
 
 // Add services to the container.
 builder.Services.AddControllers();

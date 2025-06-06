@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using olx_be_api.Data;
 using olx_be_api.DTO;
 using olx_be_api.Helpers;
+using olx_be_api.Hubs;
 using olx_be_api.Models;
 using System;
 
@@ -15,9 +17,11 @@ namespace olx_be_api.Controllers
     public class MessageController : ControllerBase
     {
         private readonly AppDbContext _context;
-        public MessageController(AppDbContext context)
+        private readonly IHubContext<ChatHub> _hubContext;
+        public MessageController(AppDbContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -190,21 +194,27 @@ namespace olx_be_api.Controllers
 
             await _context.SaveChangesAsync();
 
+            var messageResponse = new MessageResponseDto
+            {
+                Id = message.Id,
+                Content = message.Content,
+                SenderId = message.SenderId,
+                ChatRoomId = message.ChatRoomId,
+                IsRead = message.IsRead,
+                CreatedAt = message.CreatedAt
+            };
+
+            await _hubContext.Clients
+                .Group(chatRoom.Id.ToString())
+                .SendAsync("ReceiveMessage", messageResponse);
+
             return CreatedAtAction(nameof(GetMessagesByChatRoom), new { chatRoomId = message.ChatRoomId },
-                new ApiResponse<MessageResponseDto>
-                {
-                    success = true,
-                    message = "Message sent successfully.",
-                    data = new MessageResponseDto
-                    {
-                        Id = message.Id,
-                        Content = message.Content,
-                        SenderId = message.SenderId,
-                        ChatRoomId = message.ChatRoomId,
-                        IsRead = message.IsRead,
-                        CreatedAt = message.CreatedAt
-                    }
-                });
+            new ApiResponse<MessageResponseDto>
+            {
+                success = true,
+                message = "Message sent successfully.",
+                data = messageResponse
+            });
         }
 
         [HttpGet("user/chats")]

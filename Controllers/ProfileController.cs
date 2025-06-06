@@ -22,6 +22,9 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet("me")]
+        [ProducesResponseType(typeof(ApiResponse<UserProfileDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetMyProfile()
         {
             var userId = User.GetUserId();
@@ -49,6 +52,10 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPut("me")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileDTO profileDto)
         {
             if (!ModelState.IsValid)
