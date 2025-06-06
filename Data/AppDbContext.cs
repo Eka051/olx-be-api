@@ -17,7 +17,8 @@ namespace olx_be_api.Data
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<AdPackage> AdPackages { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
-        public DbSet<AdTransaction> AdTransactions { get; set; }
+        public DbSet<PremiumPackage> PremiumPackages { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
         public DbSet<ChatRoom> ChatRooms { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<Province> Provinces { get; set; }
@@ -139,18 +140,16 @@ namespace olx_be_api.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            modelBuilder.Entity<AdTransaction>(entity => {
-                entity.HasOne(at => at.CartItem)
-                   .WithMany()
-                   .HasForeignKey(at => at.CartItemId)
-                   .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Transaction>(entity => {
+                entity.HasIndex(t => t.InvoiceNumber).IsUnique();
 
-                entity.HasOne(at => at.User)
-                   .WithMany(u => u.AdTransactions)
-                   .HasForeignKey(at => at.UserId)
-                   .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
                 entity.Property(t => t.Status).HasConversion<string>();
+                entity.Property(t => t.Type).HasConversion<string>();
             });
 
             modelBuilder.Entity<UserRole>(entity =>

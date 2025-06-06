@@ -2,7 +2,7 @@
 {
     public class DokuPaymentRequest
     {
-        public int InvoiceNumber { get; set; }
+        public string InvoiceNumber { get; set; } = null!;
         public int Amount { get; set; }
         public string ProductName { get; set; } = null!;
     }
