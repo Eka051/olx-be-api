@@ -174,6 +174,20 @@ namespace olx_be_api.Controllers
             };
 
             await _context.Messages.AddAsync(message);
+            var recipientId = chatRoom.BuyerId == userId ? chatRoom.SellerId : chatRoom.BuyerId;
+            var sender = await _context.Users.FindAsync(userId);
+
+            var notification = new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = recipientId,
+                Title = $"Pesan Baru dari {sender?.Name ?? "Seseorang"}",
+                Message = message.Content,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _context.Notifications.AddAsync(notification);
+
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetMessagesByChatRoom), new { chatRoomId = message.ChatRoomId },

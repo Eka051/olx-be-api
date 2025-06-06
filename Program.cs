@@ -8,11 +8,14 @@ using System.Text;
 using Google.Apis.Auth.OAuth2;
 using API_Manajemen_Barang.Middleware;
 using olx_be_api.Helpers;
+using olx_be_api.Services;
+using olx_be_api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 // Swagger + JWT Bearer setup
 builder.Services.AddEndpointsApiExplorer();
@@ -79,6 +82,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // Dependency Injection
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
+builder.Services.AddScoped<IDokuService, DokuService>();
 
 // Firebase initialization
 FirebaseAppHelper.Initialize();
@@ -100,6 +104,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseRouting();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -115,6 +120,7 @@ app.UseAuthorization();
 
 // Map routes
 app.MapControllers();
+app.MapHub<ChatHub>("/chathub");
 
 // Run application
 app.Run();
