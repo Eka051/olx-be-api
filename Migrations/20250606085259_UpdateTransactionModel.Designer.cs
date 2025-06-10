@@ -12,8 +12,8 @@ using olx_be_api.Data;
 namespace olx_be_api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250605150432_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250606085259_UpdateTransactionModel")]
+    partial class UpdateTransactionModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -56,61 +56,6 @@ namespace olx_be_api.Migrations
                         .HasName("p_k_ad_packages");
 
                     b.ToTable("ad_packages");
-                });
-
-            modelBuilder.Entity("olx_be_api.Models.AdTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Amount")
-                        .HasColumnType("integer")
-                        .HasColumnName("amount");
-
-                    b.Property<Guid>("CartItemId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("cart_item_id");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("InvoiceNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("invoice_number");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("paid_at");
-
-                    b.Property<string>("PaymentUrl")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("payment_url");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_ad_transactions");
-
-                    b.HasIndex("CartItemId")
-                        .HasDatabaseName("i_x_ad_transactions_cart_item_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("i_x_ad_transactions_user_id");
-
-                    b.ToTable("ad_transactions");
                 });
 
             modelBuilder.Entity("olx_be_api.Models.CartItem", b =>
@@ -461,6 +406,38 @@ namespace olx_be_api.Migrations
                     b.ToTable("notifications");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.PremiumPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_days");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("price");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_premium_packages");
+
+                    b.ToTable("premium_packages");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.Product", b =>
                 {
                     b.Property<long>("Id")
@@ -592,6 +569,66 @@ namespace olx_be_api.Migrations
                     b.ToTable("roles");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<string>("PaymentUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("payment_url");
+
+                    b.Property<string>("ReferenceId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reference_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_transactions");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_transactions_invoice_number");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("i_x_transactions_user_id");
+
+                    b.ToTable("transactions");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -673,27 +710,6 @@ namespace olx_be_api.Migrations
                         .HasDatabaseName("i_x_user_roles_role_id");
 
                     b.ToTable("user_roles");
-                });
-
-            modelBuilder.Entity("olx_be_api.Models.AdTransaction", b =>
-                {
-                    b.HasOne("olx_be_api.Models.CartItem", "CartItem")
-                        .WithMany()
-                        .HasForeignKey("CartItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("f_k_ad_transactions__cart_items_cart_item_id");
-
-                    b.HasOne("olx_be_api.Models.User", "User")
-                        .WithMany("AdTransactions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("f_k_ad_transactions__users_user_id");
-
-                    b.Navigation("CartItem");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("olx_be_api.Models.CartItem", b =>
@@ -910,6 +926,18 @@ namespace olx_be_api.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.Transaction", b =>
+                {
+                    b.HasOne("olx_be_api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_transactions__users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.UserRole", b =>
                 {
                     b.HasOne("olx_be_api.Models.Role", "Role")
@@ -965,8 +993,6 @@ namespace olx_be_api.Migrations
 
             modelBuilder.Entity("olx_be_api.Models.User", b =>
                 {
-                    b.Navigation("AdTransactions");
-
                     b.Navigation("BuyerChatRooms");
 
                     b.Navigation("CartItems");

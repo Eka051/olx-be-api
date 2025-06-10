@@ -6,7 +6,8 @@
         public string Description { get; set; } = null!;
         public int Price { get; set; }
         public int CategoryId { get; set; }
-        public int LocationId { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
         public List<string> Images { get; set; } = new List<string>();
     }
 
@@ -16,11 +17,18 @@
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
         public int Price { get; set; }
-        public int CategoryId { get; set; }
-        public int LocationId { get; set; }
-        public List<string> Images { get; set; } = new List<string>();
-        public DateTime CreatedAt { get; set; }
         public bool IsSold { get; set; } = false;
+        public DateTime CreatedAt { get; set; }
+        public List<string> Images { get; set; } = new List<string>();
+        public int CategoryId { get; set; }
+        public string CategoryName { get; set; } = null!;
+
+        public int? ProvinceId { get; set; }
+        public string? ProvinceName { get; set; }
+        public int? CityId { get; set; }
+        public string? CityName { get; set; }
+        public int? DistrictId { get; set; }
+        public string? DistrictName { get; set; }
     }
 
     public class UpdateProductDTO
@@ -28,8 +36,10 @@
         public string? Title { get; set; }
         public string? Description { get; set; }
         public int? Price { get; set; }
-        public long? CategoryId { get; set; }
-        public int? LocationId { get; set; }
+        public int? CategoryId { get; set; }
+
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
         public List<string>? Images { get; set; }
     }
 }
