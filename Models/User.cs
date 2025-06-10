@@ -23,7 +23,6 @@ namespace olx_be_api.Models
         public ICollection<ChatRoom> SellerChatRooms { get; set; } = new List<ChatRoom>();
         public ICollection<Message> SentMessages { get; set; } = new List<Message>();
         public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-        public ICollection<AdTransaction> AdTransactions { get; set; } = new List<AdTransaction>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
     }

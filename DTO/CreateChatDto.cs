@@ -23,7 +23,7 @@ namespace olx_be_api.DTO
         public Guid ReceiverId { get; set; }
         public string ReceiverName { get; set; } = string.Empty;
         public string? ReceiverProfileImage { get; set; }
-        public Guid? ProductId { get; set; }
+        public long? ProductId { get; set; }
         public string? ProductTitle { get; set; }
         public string? LastMessageContent { get; set; }
         public DateTime CreatedAt { get; set; }

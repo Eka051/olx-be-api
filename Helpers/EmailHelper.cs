@@ -27,7 +27,6 @@ namespace olx_be_api.Helpers
 
             if (string.IsNullOrEmpty(smtpHost) || smtpPort == 0 || string.IsNullOrEmpty(smtpUsername) || string.IsNullOrEmpty(smtpPassword))
             {
-                await Task.CompletedTask;
                 throw new InvalidOperationException("SMTP settings are not configured properly.");
             }
 
@@ -43,8 +42,9 @@ namespace olx_be_api.Helpers
 
                     using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                     {
-                        smtpClient.Credentials = new System.Net.NetworkCredential(smtpUsername, smtpPassword);
                         smtpClient.EnableSsl = enableSsl;
+                        smtpClient.Credentials = new System.Net.NetworkCredential(smtpUsername, smtpPassword);
+
                         await smtpClient.SendMailAsync(mailMessage);
                     }
                 }

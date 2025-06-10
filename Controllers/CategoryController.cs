@@ -121,6 +121,90 @@ namespace olx_be_api.Controllers
                 });
             }
         }
+        [HttpPost("batch")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public IActionResult CreateCategories([FromBody] List<CreateCategoryDto> createCategoryDtos)
+        {
+            if (createCategoryDtos == null || !createCategoryDtos.Any())
+            {
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Request body tidak boleh kosong."
+                });
+            }
+
+            var createdCategories = new List<CategoryResponseDto>();
+            var skippedCategories = new List<object>();
+            var categoriesToAdd = new List<Category>();
+
+            var existingCategoryNames = _context.Categories
+                                                .Select(c => c.Name.ToUpper())
+                                                .ToHashSet();
+
+            foreach (var dto in createCategoryDtos)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Name))
+                {
+                    skippedCategories.Add(new { name = dto.Name, reason = "Nama kategori tidak boleh kosong." });
+                    continue;
+                }
+
+                var normalizedName = dto.Name.ToUpper();
+                if (existingCategoryNames.Contains(normalizedName) || categoriesToAdd.Any(c => c.Name.ToUpper() == normalizedName))
+                {
+                    skippedCategories.Add(new { name = dto.Name, reason = "Kategori sudah ada." });
+                    continue;
+                }
+
+                categoriesToAdd.Add(new Category { Name = dto.Name });
+            }
+
+            if (categoriesToAdd.Any())
+            {
+                try
+                {
+                    _context.Categories.AddRange(categoriesToAdd);
+                    _context.SaveChanges();
+
+                    foreach (var newCategory in categoriesToAdd)
+                    {
+                        createdCategories.Add(new CategoryResponseDto
+                        {
+                            Id = newCategory.Id,
+                            Name = newCategory.Name
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Terjadi kesalahan saat menyimpan data ke database.",
+                        errors = ex.Message
+                    });
+                }
+            }
+
+            var response = new ApiResponse<object>
+            {
+                success = true,
+                message = "Proses pembuatan kategori selesai.",
+                data = new
+                {
+                    created = createdCategories,
+                    skipped = skippedCategories
+                }
+            };
+
+            return Ok(response);
+        }
+
 
         [HttpPut("{id}")]
         [Authorize]
