@@ -24,6 +24,7 @@ namespace olx_be_api.Controllers
         [HttpGet("packages")]
         [ProducesResponseType(typeof(ApiResponse<List<PremiumPackageResponseDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetPremiumPackages()
         {
             var packages = await _context.PremiumPackages.ToListAsync();
@@ -57,6 +58,7 @@ namespace olx_be_api.Controllers
         [HttpPost("packages")]
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreatePremiumPackage([FromBody] PremiumPackageCreateDTO createDto)
         {
             if (!ModelState.IsValid)
@@ -101,6 +103,7 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdatePremiumPackage(int id, [FromBody] PremiumPackageCreateDTO updateDto)
         {
             var package = await _context.PremiumPackages.FindAsync(id);
@@ -141,6 +144,7 @@ namespace olx_be_api.Controllers
         [HttpDelete("packages/{id}")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeletePremiumPackage(int id)
         {
             var package = await _context.PremiumPackages.FindAsync(id);
