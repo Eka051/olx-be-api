@@ -27,6 +27,7 @@ namespace olx_be_api.Data
         public DbSet<Location> Locations { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<TransactionItemDetail> TransactionItemDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -150,6 +151,11 @@ namespace olx_be_api.Data
 
                 entity.Property(t => t.Status).HasConversion<string>();
                 entity.Property(t => t.Type).HasConversion<string>();
+            });
+
+            modelBuilder.Entity<TransactionItemDetail>(entity =>
+            {
+                entity.HasKey(tid => new { tid.AdPackageId, tid.ProductId }); // Composite key for TransactionItemDetail
             });
 
             modelBuilder.Entity<UserRole>(entity =>
