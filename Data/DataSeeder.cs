@@ -20,14 +20,14 @@ namespace olx_be_api.Data
 
             if (!context.Roles.Any(r => r.Name == "Admin"))
             {
-                context.Roles.Add(new Role { Name = "Admin" });
+                context.Roles.Add(new Role { Id = 1, Name = "Admin" });
                 Console.WriteLine("Seeding Role.... Admin");
                 hasChanges = true;
             }
 
             if (!context.Roles.Any(r => r.Name == "User"))
             {
-                context.Roles.Add(new Role { Name = "User" });
+                context.Roles.Add(new Role { Id = 2, Name = "User" });
                 Console.WriteLine("Seeding Role.... User");
                 hasChanges = true;
             }
