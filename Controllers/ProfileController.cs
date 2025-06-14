@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/profile")]
+    [Route("api/users")]
     [ApiController]
     [Authorize]
     public class ProfileController : ControllerBase
@@ -22,6 +22,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet("me")]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<UserProfileDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -52,6 +53,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPut("me")]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]

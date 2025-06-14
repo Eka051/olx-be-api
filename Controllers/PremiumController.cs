@@ -9,7 +9,7 @@ using olx_be_api.Models;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/premium")]
+    [Route("api/")]
     [ApiController]
     [Authorize(Roles = "Admin")]
     public class PremiumController : ControllerBase
@@ -21,7 +21,7 @@ namespace olx_be_api.Controllers
             _context = context;
         }
 
-        [HttpGet("packages")]
+        [HttpGet("premium-packages")]
         [ProducesResponseType(typeof(ApiResponse<List<PremiumPackageResponseDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -55,7 +55,7 @@ namespace olx_be_api.Controllers
             });
         }
 
-        [HttpPost("packages")]
+        [HttpPost("premium-packages")]
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -99,7 +99,7 @@ namespace olx_be_api.Controllers
             });
         }
 
-        [HttpPut("packages/{id}")]
+        [HttpPut("premium-packages/{id}")]
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
@@ -141,7 +141,7 @@ namespace olx_be_api.Controllers
             });
         }
 
-        [HttpDelete("packages/{id}")]
+        [HttpDelete("premium-packages/{id}")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
