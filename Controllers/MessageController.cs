@@ -12,7 +12,7 @@ using System;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/message")]
+    [Route("api/messages")]
     [ApiController]
     public class MessageController : ControllerBase
     {
@@ -36,13 +36,13 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "No messages found."
+                    message = "Tidak ada pesan ditemukan"
                 });
             }
             return Ok(new ApiResponse<List<MessageResponseDto>>
             {
                 success = true,
-                message = "Successfully retrieved messages.",
+                message = "Berhasil mengambil pesan",
                 data = messages.Select(m => new MessageResponseDto
                 {
                     Id = m.Id,
@@ -70,7 +70,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "User authentication required"
+                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
                 });
             }
 
@@ -82,7 +82,7 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Chat room not found or you don't have access to it"
+                    message = "Ruang chat tidak ditemukan atau Anda tidak memiliki akses."
                 });
             }
 
@@ -96,7 +96,7 @@ namespace olx_be_api.Controllers
                 return Ok(new ApiResponse<List<MessageResponseDto>>
                 {
                     success = true,
-                    message = "No messages in this chat room yet.",
+                    message = "Belum ada pesan dalam ruang chat ini.",
                     data = new List<MessageResponseDto>()
                 });
             }
@@ -111,7 +111,7 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<List<MessageResponseDto>>
             {
                 success = true,
-                message = "Successfully retrieved chat room messages.",
+                message = "Berhasil mengambil pesan ruang chat.",
                 data = messages.Select(m => new MessageResponseDto
                 {
                     Id = m.Id,
@@ -139,7 +139,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Invalid message data.",
+                    message = "Data pesan tidak valid",
                     errors = ModelState
                 });
             }
@@ -150,7 +150,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "User authentication required"
+                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
                 });
             }
 
@@ -163,7 +163,7 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Chat room not found or you don't have access to it"
+                    message = "Ruang chat tidak ditemukan atau Anda tidak memiliki akses."
                 });
             }
 
@@ -212,7 +212,7 @@ namespace olx_be_api.Controllers
             new ApiResponse<MessageResponseDto>
             {
                 success = true,
-                message = "Message sent successfully.",
+                message = "Pesan berhasil dikirim",
                 data = messageResponse
             });
         }
@@ -230,7 +230,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "User authentication required"
+                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
                 });
             }
 
@@ -247,7 +247,7 @@ namespace olx_be_api.Controllers
                 return Ok(new ApiResponse<List<ChatRoomResponseDto>>
                 {
                     success = true,
-                    message = "You don't have any active chats.",
+                    message = "Anda tidak memiliki chat yang aktif",
                     data = new List<ChatRoomResponseDto>()
                 });
             }
@@ -287,7 +287,7 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<List<ChatRoomResponseDto>>
             {
                 success = true,
-                message = "Successfully retrieved user chat rooms.",
+                message = "Berhasil mengambil pesan",
                 data = response
             });
         }
@@ -306,7 +306,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Invalid chat room data.",
+                    message = "Data pesan tidak valid",
                     errors = ModelState
                 });
             }
@@ -317,7 +317,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "User authentication required"
+                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
                 });
             }
 
@@ -327,7 +327,7 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Product not found"
+                    message = "Produk tidak ditemukan"
                 });
             }
 
@@ -338,7 +338,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "You cannot start a chat for your own product"
+                    message = "Anda tidak memulai pesan dengan produk anda sendiri"
                 });
             }
 
@@ -352,7 +352,7 @@ namespace olx_be_api.Controllers
                 return Ok(new ApiResponse<ChatRoomResponseDto>
                 {
                     success = true,
-                    message = "Chat room already exists.",
+                    message = "Ruang pesan sudah ada",
                     data = new ChatRoomResponseDto
                     {
                         Id = existingChat.Id,
@@ -397,7 +397,7 @@ namespace olx_be_api.Controllers
                 new ApiResponse<ChatRoomResponseDto>
                 {
                     success = true,
-                    message = "Chat room created successfully.",
+                    message = "Berhasil membuat ruang pesan",
                     data = new ChatRoomResponseDto
                     {
                         Id = chatRoom.Id,
@@ -425,7 +425,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "User authentication required"
+                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
                 });
             }
 
@@ -438,7 +438,7 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Message not found"
+                    message = "Pesan tidak ditemukan"
                 });
             }
 
@@ -456,7 +456,7 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<MessageResponseDto>
             {
                 success = true,
-                message = "Message marked as read.",
+                message = "Pesan ditandai dibaca",
                 data = new MessageResponseDto
                 {
                     Id = message.Id,
