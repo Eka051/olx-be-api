@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/payment")]
+    [Route("api/payments")]
     [ApiController]
     public class PaymentController : ControllerBase
     {
@@ -22,13 +22,13 @@ namespace olx_be_api.Controllers
             _dokuService = dokuService;
         }
 
-        [HttpPost("checkout-premium/{packageId}")]
+        [HttpPost("premium-subscriptions/{id}/checkout")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CheckoutPremiumAsync(int packageId)
+        public async Task<IActionResult> CheckoutPremiumAsync(int id)
         {
             var userId = User.GetUserId();
             var user = await _context.Users.FindAsync(userId);
@@ -37,7 +37,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse { message = "Pengguna tidak ditemukan." });
             }
 
-            var package = await _context.PremiumPackages.FindAsync(packageId);
+            var package = await _context.PremiumPackages.FindAsync(id);
             if (package == null || !package.IsActive)
             {
                 return NotFound(new ApiErrorResponse { success = false, message = "Paket Premium tidak ditemukan" });
@@ -78,7 +78,7 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
         }
 
-        [HttpPost("checkout-cart")]
+        [HttpPost("cart/checkout")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -153,7 +153,7 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
         }
 
-        [HttpPost("doku-notification")]
+        [HttpPost("webhooks/doku")]
         public async Task<IActionResult> DokuNotification()
         {
             using var reader = new StreamReader(Request.Body);
