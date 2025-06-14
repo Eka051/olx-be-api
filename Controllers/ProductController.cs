@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/product")]
+    [Route("api/products")]
     [ApiController]
     public class ProductController : ControllerBase
     {
