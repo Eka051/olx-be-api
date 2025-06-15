@@ -85,6 +85,7 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult CreateAdPackage([FromBody] CreateAdPackageDTO createAdPackageDto)
         {
@@ -95,6 +96,15 @@ namespace olx_be_api.Controllers
                     success = false,
                     message = "Data inputan tidak valid",
                     errors = ModelState
+                });
+            }
+            var existingPackage = _context.AdPackages.FirstOrDefault(ap => ap.Name.ToLower() == createAdPackageDto.Name);
+            if (existingPackage != null)
+            {
+                return Conflict(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Nama paket iklan sudah ada"
                 });
             }
             var adPackage = new AdPackage
@@ -139,6 +149,24 @@ namespace olx_be_api.Controllers
                     errors = ModelState
                 });
             }
+            if (id <= 0)
+            {
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "ID paket iklan tidak valid"
+                });
+            }
+
+            if (updateAdPackageDto == null)
+            {
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Data paket iklan tidak boleh kosong"
+                });
+            }
+
             var adPackage = _context.AdPackages.Find(id);
             if (adPackage == null)
             {
@@ -152,7 +180,7 @@ namespace olx_be_api.Controllers
             var existingPackage = _context.AdPackages.FirstOrDefault(ap => ap.Name == updateAdPackageDto.Name && ap.Id != id);
             if (existingPackage != null)
             {
-                return BadRequest(new ApiErrorResponse
+                return Conflict(new ApiErrorResponse
                 {
                     success = false,
                     message = "Nama paket iklan sudah ada"

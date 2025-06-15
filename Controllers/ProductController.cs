@@ -171,7 +171,17 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse { success = false, message = "Invalid data", errors = ModelState });
             }
 
-            var userId = User.GetUserId();
+            var existingProduct = await _context.Products
+                .FirstOrDefaultAsync(p => p.Title == productDTO.Title && p.UserId == User.GetUserId());
+            if (existingProduct != null)
+            {
+                return Conflict(new ApiErrorResponse { 
+                    success = false, 
+                    message = $"Produk dengan nama {productDTO.Title} sudah ada. Ganti dengan nama produk lain " 
+                });
+            }
+
+                var userId = User.GetUserId();
             if (userId == Guid.Empty)
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "Unauthorized" });
@@ -279,7 +289,18 @@ namespace olx_be_api.Controllers
                 return Forbid();
             }
 
-            product.Title = productDTO.Title ?? product.Title;
+            var existingProduct = await _context.Products
+                .FirstOrDefaultAsync(p => p.Title == productDTO.Title && p.UserId == userId && p.Id != id);
+            if (existingProduct != null)
+            {
+                return Conflict(new ApiErrorResponse
+                {
+                    success = false,
+                    message = $"Produk dengan nama {productDTO.Title} sudah ada. Ganti dengan nama produk lain."
+                });
+            }
+
+                product.Title = productDTO.Title ?? product.Title;
             product.Description = productDTO.Description ?? product.Description;
             product.Price = productDTO.Price ?? product.Price;
             product.CategoryId = productDTO.CategoryId;
