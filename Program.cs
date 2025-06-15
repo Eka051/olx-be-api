@@ -10,7 +10,6 @@ using olx_be_api.Data;
 using olx_be_api.Helpers;
 using olx_be_api.Hubs;
 using olx_be_api.Services;
-using System.Diagnostics;
 using System.Security.Claims;
 using System.Text;
 
@@ -103,11 +102,11 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
-
 var rewriteOptions = new RewriteOptions()
     .AddRewrite("^admin/?$", "admin/login.html", skipRemainingRules: true);
 app.UseRewriter(rewriteOptions);
+
+app.UseStaticFiles();
 
 app.UseRouting();
 
