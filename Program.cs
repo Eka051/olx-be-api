@@ -18,11 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IGeocodingService, GoogleGeocodingService>();
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
-// Swagger + JWT Bearer setup
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(option =>
 {
@@ -58,11 +56,9 @@ builder.Services.AddSwaggerGen(option =>
     });
 });
 
-// Database configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// JWT configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -79,12 +75,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Dependency Injection
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
 builder.Services.AddScoped<IDokuService, DokuService>();
 
-// Firebase initialization
 FirebaseAppHelper.Initialize();
 
 var app = builder.Build();
@@ -109,30 +103,23 @@ var rewriteOptions = new RewriteOptions()
     .AddRewrite("^admin$", "admin/login.html", skipRemainingRules: true);
 app.UseRewriter(rewriteOptions);
 app.UseRouting();
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "OLX Backend API v1");
-    c.RoutePrefix = "swagger";
-
-    var url = "https://localhost:7199/swagger";
-    Process.Start(new ProcessStartInfo
-    {
-        FileName = "msedge.exe",
-        Arguments = url,
-        UseShellExecute = true
-    });
+    c.RoutePrefix = string.Empty;
 });
 
-// Middleware
+
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map routes
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
 
-// Run application
+app.MapFallbackToFile("admin/login.html");
+
 app.Run();
