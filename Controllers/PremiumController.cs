@@ -71,7 +71,18 @@ namespace olx_be_api.Controllers
                 });
             }
 
-            var package = new PremiumPackage
+            var existingPackage = await _context.PremiumPackages
+                .FirstOrDefaultAsync(p => p.Name.ToLower() == createDto.Name);
+            if (existingPackage != null)
+            {
+                return Conflict(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Paket premium dengan nama tersebut sudah ada."
+                });
+            }
+
+                var package = new PremiumPackage
             {
                 Name = createDto.Name,
                 Price = createDto.Price,
@@ -116,7 +127,28 @@ namespace olx_be_api.Controllers
                 });
             }
 
-            package.Name = updateDto.Name;
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Data tidak valid.",
+                    errors = ModelState
+                });
+            }
+
+            var existingPackage = await _context.PremiumPackages
+                .FirstOrDefaultAsync(p => p.Name.ToLower() == updateDto.Name && p.Id != id);
+            if (existingPackage != null)
+            {
+                return Conflict(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Paket premium dengan nama tersebut sudah ada."
+                });
+            }
+
+                package.Name = updateDto.Name;
             package.Price = updateDto.Price;
             package.DurationDays = updateDto.DurationDays;
             package.IsActive = updateDto.IsActive;
