@@ -60,7 +60,10 @@ namespace olx_be_api.Controllers
                 }
 
                 string authProvider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId ?? "unknown";
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == authProvider);
+                var user = await _context.Users
+                    .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                    .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == authProvider);
 
                 if (user == null)
                 {
@@ -110,7 +113,7 @@ namespace olx_be_api.Controllers
                 }
 
                 var token = _jwtHelper.GenerateJwtToken(user);
-                return Ok(new LoginResponseDTO 
+                return Ok(new LoginResponseDTO
                 {
                     Success = true,
                     Message = "Login Berhasil",
@@ -131,8 +134,6 @@ namespace olx_be_api.Controllers
             {
                 return BadRequest(new { success = false, message = "Firebase login failed", error = ex.InnerException?.Message ?? ex.Message });
             }
-
-            
         }
 
         [HttpPost("email-otps")]
@@ -155,7 +156,6 @@ namespace olx_be_api.Controllers
                 return BadRequest(new { success = false, message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi." });
             }
 
-
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
 
             if (user == null)
@@ -172,7 +172,7 @@ namespace olx_be_api.Controllers
                 _context.Add(user);
                 await _context.SaveChangesAsync();
             }
-            
+
             var existingOTPs = _context.EmailOtps.Where(o => o.UserId == user.Id && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
             if (existingOTPs.Any())
             {
@@ -193,7 +193,7 @@ namespace olx_be_api.Controllers
             };
             _context.EmailOtps.Add(emailOtp);
             await _context.SaveChangesAsync();
-            
+
             try
             {
                 string emailSubject = "Kode Verifikasi Akun OLX";
@@ -211,7 +211,8 @@ namespace olx_be_api.Controllers
                 await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
 
                 return StatusCode(StatusCodes.Status201Created, new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 _context.EmailOtps.Remove(emailOtp);
                 await _context.SaveChangesAsync();
@@ -238,7 +239,11 @@ namespace olx_be_api.Controllers
                     return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
                 }
 
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
+                var user = await _context.Users
+                    .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                    .FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
+
                 if (user == null)
                 {
                     return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
@@ -266,7 +271,6 @@ namespace olx_be_api.Controllers
             {
                 return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ex.InnerException?.Message ?? ex.Message });
             }
-            
         }
     }
 }
