@@ -93,33 +93,35 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Terjadi kesalahan saat seed database: {ex.Message}");
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
         throw;
     }
 }
 
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+app.UseHttpsRedirection();
+
 app.UseStaticFiles();
+
 var rewriteOptions = new RewriteOptions()
-    .AddRewrite("^admin$", "admin/login.html", skipRemainingRules: true);
+    .AddRewrite("^admin/?$", "admin/login.html", skipRemainingRules: true);
 app.UseRewriter(rewriteOptions);
+
 app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "OLX Backend API v1");
-    c.RoutePrefix = string.Empty;
+    c.RoutePrefix = "swagger";
 });
-
-
-app.UseMiddleware<ErrorHandlingMiddleware>();
-app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
-
-app.MapFallbackToFile("admin/login.html");
 
 app.Run();
