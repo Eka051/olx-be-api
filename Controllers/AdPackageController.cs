@@ -19,6 +19,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<List<AdPackageDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -37,19 +38,50 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "No ad packages found."
+                    message = "Paket iklan tidak ditemukan"
                 });
             }
             return Ok(new ApiResponse<List<AdPackageDTO>>
             {
                 success = true,
-                message = "Successfully retrieved ad packages.",
+                message = "Berhasil mengambil data paket iklan",
+                data = response
+            });
+        }
+
+        [HttpGet("{id}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public IActionResult GetAdPackageById(int id)
+        {
+            var adPackage = _context.AdPackages.Find(id);
+            if (adPackage == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = $"Paket iklan dengan id {id} tidak ditemukan"
+                });
+            }
+            var response = new AdPackageDTO
+            {
+                Id = adPackage.Id,
+                Name = adPackage.Name,
+                Price = adPackage.Price,
+                DurationDays = adPackage.DurationDays
+            };
+            return Ok(new ApiResponse<AdPackageDTO>
+            {
+                success = true,
+                message = "Berhasil mengambil data paket iklan",
                 data = response
             });
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
@@ -61,7 +93,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Invalid data provided.",
+                    message = "Data inputan tidak valid",
                     errors = ModelState
                 });
             }
@@ -90,7 +122,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -103,7 +135,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Data Invalid",
+                    message = "Data input tidak valid",
                     errors = ModelState
                 });
             }
@@ -148,7 +180,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPatch("price/{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -161,7 +193,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Data Invalid",
+                    message = "Data input tidak valid",
                     errors = ModelState
                 });
             }
@@ -193,7 +225,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
@@ -215,7 +247,7 @@ namespace olx_be_api.Controllers
             {
                 success = true,
                 message = "Berhasil menghapus paket iklan",
-                data = "Paket iklan dengan ID " + id + " telah dihapus."
+                data = $"Paket iklan dengan ID {id} telah dihapus."
             });
         }
     }
