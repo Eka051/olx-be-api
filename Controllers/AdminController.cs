@@ -18,10 +18,12 @@ namespace olx_be_api.Controllers
     public class AdminController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public AdminController(AppDbContext context)
+        public AdminController(AppDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         [HttpGet("stats")]
@@ -47,6 +49,19 @@ namespace olx_be_api.Controllers
             };
 
             return Ok(new ApiResponse<object> { success = true, data = stats });
+        }
+
+        [HttpGet("/admin")]
+        [AllowAnonymous]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult AdminLoginPage()
+        {
+            var filePath = Path.Combine(_env.WebRootPath, "admin", "login.html");
+            if (System.IO.File.Exists(filePath))
+            {
+                return PhysicalFile(filePath, "text/html");
+            }
+            return NotFound("Halaman login admin tidak ditemukan.");
         }
 
         [HttpGet("users")]
