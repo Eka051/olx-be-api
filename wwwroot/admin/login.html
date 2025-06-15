@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #F7F8FC;
+        }
+
+        .otp-input {
+            width: 48px;
+            height: 56px;
+            font-size: 1.5rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.5rem;
+            text-align: center; /* Memastikan teks di tengah */
+            transition: all 0.2s;
+        }
+
+            .otp-input:focus {
+                border-color: #3977FE;
+                box-shadow: 0 0 0 3px rgba(57, 119, 254, 0.2);
+                outline: none;
+            }
+    </style>
+</head>
+<body class="h-full flex flex-col items-center justify-center p-4">
+
+    <main class="w-full max-w-sm">
+        <!-- Step 1: Email Input -->
+        <div id="email-step">
+            <h2 class="text-2xl font-bold text-center text-gray-900">Admin Portal</h2>
+            <p class="mt-2 text-sm text-center text-gray-500">Masukkan email Anda untuk melanjutkan.</p>
+            <form id="requestOtpForm" class="mt-8 space-y-4">
+                <div>
+                    <label for="email" class="text-sm font-medium text-gray-700">Alamat Email</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required class="mt-1 w-full px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-[#3977FE] focus:ring focus:ring-[#3977FE] focus:ring-opacity-20" placeholder="admin@example.com">
+                </div>
+                <div id="request-error-message" class="text-center text-sm text-red-600 font-medium h-4"></div>
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent font-medium rounded-lg text-white bg-[#3977FE] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3977FE] transition-all duration-200">
+                        <span id="request-button-text">Kirim Kode Verifikasi</span>
+                        <svg id="request-loading-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Step 2: OTP Verification -->
+        <div id="otp-step" class="hidden">
+            <h2 class="text-2xl font-bold text-center text-gray-900">Masukkan Kode Verifikasi</h2>
+            <p class="mt-2 text-sm text-center text-gray-500">
+                Kode 6 digit telah dikirim ke <br><strong id="sent-to-email" class="font-semibold"></strong>.
+            </p>
+            <form id="verifyOtpForm" class="mt-8 space-y-4">
+                <div class="flex justify-center space-x-2 sm:space-x-3">
+                    <input name="otp" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" required>
+                    <input name="otp" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" required>
+                    <input name="otp" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" required>
+                    <input name="otp" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" required>
+                    <input name="otp" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" required>
+                    <input name="otp" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" required>
+                </div>
+                <div id="verify-error-message" class="text-center text-sm text-red-600 font-medium h-4"></div>
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent font-medium rounded-lg text-white bg-[#3977FE] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3977FE] transition-all duration-200">
+                        <span id="verify-button-text">Verifikasi & Masuk</span>
+                        <svg id="verify-loading-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+                <div class="text-center text-sm">
+                    <p class="text-gray-500">Tidak menerima kode? <button type="button" id="back-to-email" class="font-medium text-[#3977FE] hover:underline">Kirim ulang</button></p>
+                </div>
+            </form>
+        </div>
+    </main>
+    <script src="./auth.js"></script>
+</body>
+</html>

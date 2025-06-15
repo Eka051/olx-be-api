@@ -2,6 +2,7 @@ using API_Manajemen_Barang.Middleware;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -103,6 +104,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseStaticFiles();
+var rewriteOptions = new RewriteOptions()
+    .AddRewrite("^admin$", "admin/login.html", skipRemainingRules: true);
+app.UseRewriter(rewriteOptions);
 app.UseRouting();
 app.UseSwagger();
 app.UseSwaggerUI(c =>

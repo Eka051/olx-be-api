@@ -1,0 +1,609 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin | Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #F7F8FC;
+        }
+
+        .sidebar-link.active {
+            background-color: #3977FE;
+            color: white;
+        }
+
+        .sidebar-link:not(.active):hover {
+            background-color: #252e3e;
+        }
+
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        /* Price input styling */
+        .price-input {
+            font-family: 'Roboto', sans-serif;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-gray-900 text-gray-300 flex flex-col flex-shrink-0">
+            <div class="h-20 flex items-center px-6 border-b border-gray-700">
+                <a href="#dashboard" class="flex items-center space-x-3" onclick="switchView('dashboard')">
+                    <span class="text-xl font-bold text-white">Admin Portal</span>
+                </a>
+            </div>
+            <nav class="flex-1 px-4 py-4 space-y-2">
+                <a href="#dashboard" class="sidebar-link active flex items-center px-4 py-3 rounded-lg transition-colors duration-200" onclick="switchView('dashboard')"><i class="fa-fw fas fa-tachometer-alt w-6"></i><span class="ml-3 font-medium">Dashboard</span></a>
+                <a href="#users" class="sidebar-link flex items-center px-4 py-3 rounded-lg transition-colors duration-200" onclick="switchView('users')"><i class="fa-fw fas fa-users w-6"></i><span class="ml-3 font-medium">Pengguna</span></a>
+                <a href="#categories" class="sidebar-link flex items-center px-4 py-3 rounded-lg transition-colors duration-200" onclick="switchView('categories')"><i class="fa-fw fas fa-tags w-6"></i><span class="ml-3 font-medium">Kategori</span></a>
+                <a href="#ad-packages" class="sidebar-link flex items-center px-4 py-3 rounded-lg transition-colors duration-200" onclick="switchView('ad-packages')"><i class="fa-fw fas fa-bullhorn w-6"></i><span class="ml-3 font-medium">Paket Iklan</span></a>
+                <a href="#premium-packages" class="sidebar-link flex items-center px-4 py-3 rounded-lg transition-colors duration-200" onclick="switchView('premium-packages')"><i class="fa-fw fas fa-star w-6"></i><span class="ml-3 font-medium">Paket Premium</span></a>
+            </nav>
+            <div class="px-6 py-4 border-t border-gray-700">
+                <button id="logout-button" class="w-full flex items-center justify-center px-4 py-3 rounded-lg text-red-400 hover:bg-red-500 hover:text-white transition-colors duration-200">
+                    <i class="fa-fw fas fa-sign-out-alt w-6"></i>
+                    <span class="ml-3 font-medium">Keluar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 bg-white border-b">
+                <h1 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                <div id="user-profile" class="flex items-center space-x-4"></div>
+            </header>
+
+            <main class="flex-1 overflow-x-hidden overflow-y-auto p-8">
+                <div id="dashboard-view" class="view-content">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm flex items-center space-x-4"><div class="bg-blue-100 p-3 rounded-full"><i class="fas fa-users text-[#3977FE] text-xl"></i></div><div><p class="text-sm text-gray-500">Total Pengguna</p><p id="total-users" class="text-2xl font-bold text-gray-900">0</p></div></div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm flex items-center space-x-4"><div class="bg-green-100 p-3 rounded-full"><i class="fas fa-box-open text-green-500 text-xl"></i></div><div><p class="text-sm text-gray-500">Iklan Aktif</p><p id="total-products" class="text-2xl font-bold text-gray-900">0</p></div></div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm flex items-center space-x-4"><div class="bg-yellow-100 p-3 rounded-full"><i class="fas fa-tags text-yellow-500 text-xl"></i></div><div><p class="text-sm text-gray-500">Total Kategori</p><p id="total-categories" class="text-2xl font-bold text-gray-900">0</p></div></div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm flex items-center space-x-4"><div class="bg-purple-100 p-3 rounded-full"><i class="fas fa-wallet text-purple-500 text-xl"></i></div><div><p class="text-sm text-gray-500">Pendapatan</p><p id="total-revenue" class="text-2xl font-bold text-gray-900">Rp 0</p></div></div>
+                    </div>
+                    <div class="mt-8 bg-white p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-800">Analitik Pertumbuhan (6 Bulan Terakhir)</h3>
+                        <div class="h-80"><canvas id="growthChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="users-view" class="view-content hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-6">Manajemen Pengguna (Non-Admin)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">Nama</th><th scope="col" class="px-6 py-3">Email</th><th scope="col" class="px-6 py-3">Total Iklan</th><th scope="col" class="px-6 py-3">Tgl Bergabung</th></tr></thead><tbody id="users-table-body"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="categories-view" class="view-content hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800">Manajemen Kategori</h3>
+                            <button onclick="openCategoryModal()" class="text-white bg-[#3977FE] hover:bg-opacity-90 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Tambah Kategori</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">ID</th><th scope="col" class="px-6 py-3">Nama Kategori</th><th scope="col" class="px-6 py-3 text-right">Aksi</th></tr></thead><tbody id="categories-table-body"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ad-packages-view" class="view-content hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800">Manajemen Paket Iklan</h3>
+                            <button onclick="openAdPackageModal()" class="text-white bg-[#3977FE] hover:bg-opacity-90 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Tambah Paket</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">Nama Paket</th><th scope="col" class="px-6 py-3">Tipe</th><th scope="col" class="px-6 py-3">Harga</th><th scope="col" class="px-6 py-3">Durasi (Hari)</th><th scope="col" class="px-6 py-3 text-right">Aksi</th></tr></thead><tbody id="ad-packages-table-body"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="premium-packages-view" class="view-content hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800">Manajemen Paket Premium</h3>
+                            <button onclick="openPremiumPackageModal()" class="text-white bg-[#3977FE] hover:bg-opacity-90 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Tambah Paket</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">Nama Paket</th><th scope="col" class="px-6 py-3">Harga</th><th scope="col" class="px-6 py-3">Durasi (Hari)</th><th scope="col" class="px-6 py-3">Status</th><th scope="col" class="px-6 py-3 text-right">Aksi</th></tr></thead><tbody id="premium-packages-table-body"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Generic Modal -->
+    <div id="main-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg z-10">
+            <h3 id="modal-title" class="text-xl font-semibold mb-6">Judul Modal</h3>
+            <div id="modal-body"></div>
+            <div id="modal-footer" class="mt-6 flex justify-end space-x-3">
+                <button id="modal-cancel-btn" class="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
+                <button id="modal-save-btn" class="px-5 py-2 bg-[#3977FE] text-white rounded-lg hover:bg-opacity-90">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            switchView('dashboard');
+
+            const userProfile = document.getElementById('user-profile');
+            const adminUser = JSON.parse(localStorage.getItem('admin_user'));
+            if (adminUser) {
+                userProfile.innerHTML = `
+                        <div class="text-right">
+                             <h4 class="font-semibold text-gray-800">${adminUser.name || 'Admin'}</h4>
+                             <p class="text-xs text-gray-500">${adminUser.email || 'admin@example.com'}</p>
+                        </div>
+                        <img src="${adminUser.profilePictureUrl || 'https://ui-avatars.com/api/?name=' + (adminUser.name || 'A').charAt(0) + '&background=3977FE&color=fff'}" class="w-12 h-12 rounded-full" alt="Admin">
+                        `;
+            }
+            document.getElementById('logout-button').addEventListener('click', confirmLogout);
+            document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+        });
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view-content').forEach(view => view.classList.add('hidden'));
+            document.getElementById(`${viewId}-view`).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+            document.querySelector(`a[href="#${viewId}"]`).classList.add('active');
+
+            const pageTitles = {
+                dashboard: 'Dashboard',
+                users: 'Manajemen Pengguna',
+                categories: 'Manajemen Kategori',
+                'ad-packages': 'Manajemen Paket Iklan',
+                'premium-packages': 'Manajemen Paket Premium'
+            };
+            document.getElementById('page-title').textContent = pageTitles[viewId] || 'Dashboard';
+
+            if (viewId === 'dashboard') loadDashboardData();
+            if (viewId === 'users') loadUsersData();
+            if (viewId === 'categories') loadCategoriesData();
+            if (viewId === 'ad-packages') loadAdPackagesData();
+            if (viewId === 'premium-packages') loadPremiumPackagesData();
+        }
+
+        function closeModal() {
+            document.getElementById('main-modal').classList.remove('flex');
+            document.getElementById('main-modal').classList.add('hidden');
+        }
+
+        // --- DASHBOARD ---
+        async function loadDashboardData() {
+            try {
+                const response = await fetchWithAuth('/api/admin/stats');
+                if (response.success) {
+                    const stats = response.data;
+                    document.getElementById('total-users').textContent = stats.totalUsers.toLocaleString('id-ID');
+                    document.getElementById('total-products').textContent = stats.activeProducts.toLocaleString('id-ID');
+                    document.getElementById('total-categories').textContent = stats.totalCategories.toLocaleString('id-ID');
+                    document.getElementById('total-revenue').textContent = `Rp ${stats.totalRevenue.toLocaleString('id-ID')}`;
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Gagal memuat statistik dashboard.', 'error');
+            }
+
+            try {
+                const chartResponse = await fetchWithAuth('/api/admin/growth-chart');
+                if (chartResponse.success) {
+                    renderGrowthChart(chartResponse.data);
+                }
+            } catch (error) {
+                renderGrowthChart();
+            }
+        }
+
+        // --- USERS ---
+        async function loadUsersData() {
+            const tableBody = document.getElementById('users-table-body');
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-gray-500">Memuat data pengguna...</td></tr>`;
+            try {
+                const response = await fetchWithAuth('/api/admin/users');
+                if (response.success && response.data.length > 0) {
+                    tableBody.innerHTML = response.data.map(user => `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4 font-medium text-gray-900">${user.name || '-'}</td>
+                                <td class="px-6 py-4">${user.email || '-'}</td>
+                                <td class="px-6 py-4">${user.totalAds}</td>
+                                <td class="px-6 py-4">${new Date(user.createdAt).toLocaleDateString('id-ID')}</td>
+                            </tr>
+                        `).join('');
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-gray-500">Tidak ada data pengguna.</td></tr>`;
+                }
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Gagal memuat data pengguna.</td></tr>`;
+            }
+        }
+
+        // --- CATEGORY CRUD ---
+        async function loadCategoriesData() {
+            const tableBody = document.getElementById('categories-table-body');
+            tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">Memuat data...</td></tr>`;
+            try {
+                const response = await fetchWithAuth('/api/categories');
+                if (response.success && response.data.length > 0) {
+                    tableBody.innerHTML = response.data.map(cat => `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4 font-medium text-gray-900">${cat.id}</td>
+                                <td class="px-6 py-4">${cat.name}</td>
+                                <td class="px-6 py-4 text-right space-x-4">
+                                    <button onclick="openCategoryModal(${cat.id}, '${cat.name}')" class="font-medium text-blue-600 hover:underline">Ubah</button>
+                                    <button onclick="deleteCategory(${cat.id})" class="font-medium text-red-600 hover:underline">Hapus</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">Belum ada kategori.</td></tr>`;
+                }
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-red-500">Gagal memuat data.</td></tr>`;
+            }
+        }
+
+        function openCategoryModal(id = null, name = '') {
+            const modal = document.getElementById('main-modal');
+            modal.querySelector('#modal-title').textContent = id ? 'Ubah Kategori' : 'Tambah Kategori Baru';
+            modal.querySelector('#modal-body').innerHTML = `
+                    <label for="modal-input-name" class="block mb-2 text-sm font-medium text-gray-900">Nama Kategori</label>
+                    <input type="text" id="modal-input-name" value="${name}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>`;
+
+            modal.querySelector('#modal-save-btn').onclick = () => saveCategory(id);
+            modal.style.display = 'flex';
+        }
+
+        async function saveCategory(id) {
+            const name = document.getElementById('modal-input-name').value.trim();
+            if (!name) { Swal.fire('Peringatan', 'Nama kategori tidak boleh kosong.', 'warning'); return; }
+
+            const method = id ? 'PUT' : 'POST';
+            const endpoint = id ? `/api/categories/${id}` : '/api/categories';
+            const body = JSON.stringify({ name });
+
+            try {
+                const response = await fetchWithAuth(endpoint, { method, body });
+                if (response.success || response.ok) {
+                    closeModal();
+                    loadCategoriesData();
+                    Swal.fire('Berhasil', `Kategori berhasil ${id ? 'diperbarui' : 'ditambahkan'}.`, 'success');
+                } else {
+                    Swal.fire('Gagal', response.message || 'Gagal menyimpan kategori.', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', `Terjadi kesalahan: ${error.message}`, 'error');
+            }
+        }
+
+        function deleteCategory(id) {
+            Swal.fire({
+                title: 'Anda yakin?',
+                text: `Kategori dengan ID ${id} akan dihapus secara permanen.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        await fetchWithAuth(`/api/categories/${id}`, { method: 'DELETE' });
+                        Swal.fire('Dihapus!', 'Kategori telah berhasil dihapus.', 'success');
+                        loadCategoriesData();
+                    } catch (error) {
+                        Swal.fire('Gagal', `Gagal menghapus kategori: ${error.message}`, 'error');
+                    }
+                }
+            });
+        }
+
+        // --- AD PACKAGES CRUD ---
+        async function loadAdPackagesData() {
+            const tableBody = document.getElementById('ad-packages-table-body');
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Memuat data...</td></tr>`;
+            try {
+                const response = await fetchWithAuth('/api/adPackage');
+                if (response.success && response.data.length > 0) {
+                    tableBody.innerHTML = response.data.map(pkg => `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
+                                <td class="px-6 py-4">${pkg.type}</td>
+                                <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
+                                <td class="px-6 py-4">${pkg.durationDays}</td>
+                                <td class="px-6 py-4 text-right space-x-4">
+                                    <button onclick='openAdPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="font-medium text-blue-600 hover:underline">Ubah</button>
+                                    <button onclick="deleteAdPackage(${pkg.id})" class="font-medium text-red-600 hover:underline">Hapus</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Belum ada paket iklan.</td></tr>`;
+                }
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Gagal memuat data.</td></tr>`;
+            }
+        }
+
+        function openAdPackageModal(id = null, pkg = {}) {
+            const modal = document.getElementById('main-modal');
+            modal.querySelector('#modal-title').textContent = id ? 'Ubah Paket Iklan' : 'Tambah Paket Iklan Baru';
+            modal.querySelector('#modal-body').innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="modal-input-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
+                            <input type="text" id="modal-input-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                        </div>
+                        <div>
+                            <label for="modal-input-type" class="block mb-2 text-sm font-medium">Tipe</label>
+                            <select id="modal-input-type" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5">
+                                <option value="Standard" ${pkg.type === 'Standard' ? 'selected' : ''}>Standard</option>
+                                <option value="Highlighted" ${pkg.type === 'Highlighted' ? 'selected' : ''}>Highlighted</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="modal-input-price" class="block mb-2 text-sm font-medium">Harga</label>
+                            <input type="number" id="modal-input-price" value="${pkg.price || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="0" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                        </div>
+                        <div>
+                            <label for="modal-input-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
+                            <input type="number" id="modal-input-duration" value="${pkg.durationDays || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                        </div>
+                    </div>`;
+            modal.querySelector('#modal-save-btn').onclick = () => saveAdPackage(id);
+            modal.style.display = 'flex';
+        }
+
+        async function saveAdPackage(id) {
+            const name = document.getElementById('modal-input-name').value;
+            const type = document.getElementById('modal-input-type').value;
+            const price = parseInt(document.getElementById('modal-input-price').value);
+            const durationDays = parseInt(document.getElementById('modal-input-duration').value);
+
+            if (!name || price < 0 || durationDays < 1) {
+                Swal.fire('Peringatan', 'Harap isi semua kolom dengan benar.', 'warning');
+                return;
+            }
+
+            const method = id ? 'PUT' : 'POST';
+            const endpoint = id ? `/api/adPackage/${id}` : '/api/adPackage';
+            const body = JSON.stringify({ name, type, price, durationDays });
+
+            try {
+                const response = await fetchWithAuth(endpoint, { method, body });
+                if (response.success || response.ok) {
+                    closeModal();
+                    loadAdPackagesData();
+                    Swal.fire('Berhasil', `Paket iklan berhasil ${id ? 'diperbarui' : 'ditambahkan'}.`, 'success');
+                } else {
+                    Swal.fire('Gagal', response.message || 'Gagal menyimpan paket.', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', `Terjadi kesalahan: ${error.message}`, 'error');
+            }
+        }
+
+        function deleteAdPackage(id) {
+            Swal.fire({
+                title: 'Anda yakin?', text: `Paket iklan ID ${id} akan dihapus.`, icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!', cancelButtonText: 'Batal'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        await fetchWithAuth(`/api/adPackage/${id}`, { method: 'DELETE' });
+                        Swal.fire('Dihapus!', 'Paket iklan telah dihapus.', 'success');
+                        loadAdPackagesData();
+                    } catch (error) { Swal.fire('Gagal', `Gagal menghapus: ${error.message}`, 'error'); }
+                }
+            });
+        }
+
+        async function loadPremiumPackagesData() {
+            const tableBody = document.getElementById('premium-packages-table-body');
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Memuat data...</td></tr>`;
+            try {
+                const response = await fetchWithAuth('/api/premium-packages');
+                if (response.success && response.data.length > 0) {
+                    tableBody.innerHTML = response.data.map(pkg => `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
+                                <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
+                                <td class="px-6 py-4">${pkg.durationDays}</td>
+                                <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pkg.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${pkg.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
+                                <td class="px-6 py-4 text-right space-x-4">
+                                    <button onclick='openPremiumPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="font-medium text-blue-600 hover:underline">Ubah</button>
+                                    <button onclick="deletePremiumPackage(${pkg.id})" class="font-medium text-red-600 hover:underline">Hapus</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Belum ada paket premium.</td></tr>`;
+                }
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Gagal memuat data.</td></tr>`;
+            }
+        }
+
+        function openPremiumPackageModal(id = null, pkg = {}) {
+            const modal = document.getElementById('main-modal');
+            modal.querySelector('#modal-title').textContent = id ? 'Ubah Paket Premium' : 'Tambah Paket Premium Baru';
+            modal.querySelector('#modal-body').innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="modal-premium-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
+                            <input type="text" id="modal-premium-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                        </div>
+                        <div>
+                            <label for="modal-premium-price" class="block mb-2 text-sm font-medium">Harga</label>
+                            <input type="number" id="modal-premium-price" value="${pkg.price || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="0" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                        </div>
+                        <div>
+                            <label for="modal-premium-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
+                            <input type="number" id="modal-premium-duration" value="${pkg.durationDays || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                        </div>
+                         <div>
+                             <label class="relative inline-flex items-center cursor-pointer">
+                               <input type="checkbox" id="modal-premium-active" class="sr-only peer" ${pkg.isActive === undefined || pkg.isActive ? 'checked' : ''}>
+                               <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                               <span class="ml-3 text-sm font-medium text-gray-900">Aktif</span>
+                             </label>
+                        </div>
+                    </div>`;
+
+            modal.querySelector('#modal-save-btn').onclick = () => savePremiumPackage(id);
+            modal.style.display = 'flex';
+        }
+
+        async function savePremiumPackage(id) {
+            const name = document.getElementById('modal-premium-name').value;
+            const price = parseInt(document.getElementById('modal-premium-price').value);
+            const durationDays = parseInt(document.getElementById('modal-premium-duration').value);
+            const isActive = document.getElementById('modal-premium-active').checked;
+
+            if (!name || price < 0 || durationDays < 1) {
+                Swal.fire('Peringatan', 'Harap isi semua kolom dengan benar.', 'warning');
+                return;
+            }
+
+            const method = id ? 'PUT' : 'POST';
+            const endpoint = id ? `/api/premium-packages/${id}` : '/api/premium-packages';
+            const body = JSON.stringify({ name, price, durationDays, isActive });
+
+            try {
+                const response = await fetchWithAuth(endpoint, { method, body });
+                if (response.success || response.ok) {
+                    closeModal();
+                    loadPremiumPackagesData();
+                    Swal.fire('Berhasil', `Paket premium berhasil ${id ? 'diperbarui' : 'ditambahkan'}.`, 'success');
+                } else {
+                    Swal.fire('Gagal', response.message || 'Gagal menyimpan paket.', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', `Terjadi kesalahan: ${error.message}`, 'error');
+            }
+        }
+
+        function deletePremiumPackage(id) {
+            Swal.fire({
+                title: 'Anda yakin?', text: `Paket premium ID ${id} akan dihapus.`, icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!', cancelButtonText: 'Batal'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        await fetchWithAuth(`/api/premium-packages/${id}`, { method: 'DELETE' });
+                        Swal.fire('Dihapus!', 'Paket premium telah dihapus.', 'success');
+                        loadPremiumPackagesData();
+                    } catch (error) { Swal.fire('Gagal', `Gagal menghapus: ${error.message}`, 'error'); }
+                }
+            });
+        }
+
+        function confirmLogout() {
+            Swal.fire({
+                title: 'Keluar dari Sesi?',
+                text: "Anda akan dikembalikan ke halaman login.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3977FE',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Keluar!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    logout();
+                }
+            })
+        }
+
+        function renderGrowthChart(chartData = null) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            if (window.myChart instanceof Chart) window.myChart.destroy();
+
+            const labels = chartData ? chartData.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
+            const usersData = chartData ? chartData.usersData : [65, 59, 80, 81, 56, 55];
+            const revenueData = chartData ? chartData.revenueData : [280000, 480000, 400000, 190000, 860000, 270000];
+
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pendapatan (Rp)',
+                            data: revenueData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y-revenue',
+                        },
+                        {
+                            label: 'Pengguna Baru',
+                            data: usersData,
+                            type: 'line',
+                            borderColor: '#3977FE',
+                            tension: 0.4,
+                            fill: false,
+                            yAxisID: 'y-users',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        'y-revenue': {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: {
+                                callback: function (value) { return 'Rp ' + value.toLocaleString('id-ID'); }
+                            }
+                        },
+                        'y-users': {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
