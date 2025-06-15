@@ -39,12 +39,45 @@
         input[type=number] {
             -moz-appearance: textfield;
         }
-        
+
         /* Price input styling */
         .price-input {
             font-family: 'Roboto', sans-serif;
             letter-spacing: 0.5px;
         }
+
+        /* Modern action buttons */
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem 0.75rem; /* 6px 12px */
+            font-size: 0.875rem; /* 14px */
+            font-weight: 500;
+            border-radius: 0.5rem; /* 8px */
+            transition: background-color 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .action-btn-edit {
+            background-color: #EBF5FF;
+            color: #3B82F6;
+            border-color: #BEE3F8;
+        }
+
+            .action-btn-edit:hover {
+                background-color: #D1E7FF;
+            }
+
+        .action-btn-delete {
+            background-color: #FFF5F5;
+            color: #EF4444;
+            border-color: #FED7D7;
+        }
+
+            .action-btn-delete:hover {
+                background-color: #FEE2E2;
+            }
     </style>
 </head>
 <body class="antialiased">
@@ -142,11 +175,12 @@
 
     <!-- Generic Modal -->
     <div id="main-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg z-10">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <h3 id="modal-title" class="text-xl font-semibold mb-6">Judul Modal</h3>
             <div id="modal-body"></div>
             <div id="modal-footer" class="mt-6 flex justify-end space-x-3">
-                <button id="modal-cancel-btn" class="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
+                <!-- THE FIX: Added onclick="closeModal()" directly to the button -->
+                <button id="modal-cancel-btn" onclick="closeModal()" class="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
                 <button id="modal-save-btn" class="px-5 py-2 bg-[#3977FE] text-white rounded-lg hover:bg-opacity-90">Simpan</button>
             </div>
         </div>
@@ -162,15 +196,25 @@
             const adminUser = JSON.parse(localStorage.getItem('admin_user'));
             if (adminUser) {
                 userProfile.innerHTML = `
-                        <div class="text-right">
-                             <h4 class="font-semibold text-gray-800">${adminUser.name || 'Admin'}</h4>
-                             <p class="text-xs text-gray-500">${adminUser.email || 'admin@example.com'}</p>
-                        </div>
-                        <img src="${adminUser.profilePictureUrl || 'https://ui-avatars.com/api/?name=' + (adminUser.name || 'A').charAt(0) + '&background=3977FE&color=fff'}" class="w-12 h-12 rounded-full" alt="Admin">
-                        `;
+                            <div class="text-right">
+                                 <h4 class="font-semibold text-gray-800">${adminUser.name || 'Admin'}</h4>
+                                 <p class="text-xs text-gray-500">${adminUser.email || 'admin@example.com'}</p>
+                            </div>
+                            <img src="${adminUser.profilePictureUrl || 'https://ui-avatars.com/api/?name=' + (adminUser.name || 'A').charAt(0) + '&background=3977FE&color=fff'}" class="w-12 h-12 rounded-full" alt="Admin">
+                            `;
             }
             document.getElementById('logout-button').addEventListener('click', confirmLogout);
-            document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+
+            // THE FIX: Removed the old event listener since we now use onclick attribute
+            // document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+
+            // Close modal when clicking on the overlay
+            document.getElementById('main-modal').addEventListener('click', (event) => {
+                // Check if the clicked element is the modal background itself, not its children
+                if (event.target === event.currentTarget) {
+                    closeModal();
+                }
+            });
         });
 
         function switchView(viewId) {
@@ -196,8 +240,26 @@
         }
 
         function closeModal() {
-            document.getElementById('main-modal').classList.remove('flex');
-            document.getElementById('main-modal').classList.add('hidden');
+            const modal = document.getElementById('main-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function formatRupiah(input) {
+            let value = input.value.replace(/[^0-9]/g, '');
+            if (value) {
+                const number = parseInt(value, 10);
+                input.value = 'Rp ' + number.toLocaleString('id-ID');
+            } else {
+                input.value = '';
+            }
+        }
+
+        function getRawPrice(id) {
+            const input = document.getElementById(id);
+            if (!input || !input.value) return 0;
+            const rawValue = parseInt(input.value.replace(/[^0-9]/g, ''), 10);
+            return isNaN(rawValue) ? 0 : rawValue;
         }
 
         // --- DASHBOARD ---
@@ -233,13 +295,13 @@
                 const response = await fetchWithAuth('/api/admin/users');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(user => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-medium text-gray-900">${user.name || '-'}</td>
-                                <td class="px-6 py-4">${user.email || '-'}</td>
-                                <td class="px-6 py-4">${user.totalAds}</td>
-                                <td class="px-6 py-4">${new Date(user.createdAt).toLocaleDateString('id-ID')}</td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${user.name || '-'}</td>
+                                    <td class="px-6 py-4">${user.email || '-'}</td>
+                                    <td class="px-6 py-4">${user.totalAds}</td>
+                                    <td class="px-6 py-4">${new Date(user.createdAt).toLocaleDateString('id-ID')}</td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-gray-500">Tidak ada data pengguna.</td></tr>`;
                 }
@@ -256,15 +318,15 @@
                 const response = await fetchWithAuth('/api/categories');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(cat => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-medium text-gray-900">${cat.id}</td>
-                                <td class="px-6 py-4">${cat.name}</td>
-                                <td class="px-6 py-4 text-right space-x-4">
-                                    <button onclick="openCategoryModal(${cat.id}, '${cat.name}')" class="font-medium text-blue-600 hover:underline">Ubah</button>
-                                    <button onclick="deleteCategory(${cat.id})" class="font-medium text-red-600 hover:underline">Hapus</button>
-                                </td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${cat.id}</td>
+                                    <td class="px-6 py-4">${cat.name}</td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <button onclick="openCategoryModal(${cat.id}, '${cat.name}')" class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
+                                        <button onclick="deleteCategory(${cat.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">Belum ada kategori.</td></tr>`;
                 }
@@ -277,11 +339,12 @@
             const modal = document.getElementById('main-modal');
             modal.querySelector('#modal-title').textContent = id ? 'Ubah Kategori' : 'Tambah Kategori Baru';
             modal.querySelector('#modal-body').innerHTML = `
-                    <label for="modal-input-name" class="block mb-2 text-sm font-medium text-gray-900">Nama Kategori</label>
-                    <input type="text" id="modal-input-name" value="${name}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>`;
+                        <label for="modal-input-name" class="block mb-2 text-sm font-medium text-gray-900">Nama Kategori</label>
+                        <input type="text" id="modal-input-name" value="${name}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>`;
 
             modal.querySelector('#modal-save-btn').onclick = () => saveCategory(id);
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
         async function saveCategory(id) {
@@ -337,17 +400,17 @@
                 const response = await fetchWithAuth('/api/adPackage');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(pkg => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
-                                <td class="px-6 py-4">${pkg.type}</td>
-                                <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
-                                <td class="px-6 py-4">${pkg.durationDays}</td>
-                                <td class="px-6 py-4 text-right space-x-4">
-                                    <button onclick='openAdPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="font-medium text-blue-600 hover:underline">Ubah</button>
-                                    <button onclick="deleteAdPackage(${pkg.id})" class="font-medium text-red-600 hover:underline">Hapus</button>
-                                </td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
+                                    <td class="px-6 py-4">${pkg.type}</td>
+                                    <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
+                                    <td class="px-6 py-4">${pkg.durationDays}</td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <button onclick='openAdPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
+                                        <button onclick="deleteAdPackage(${pkg.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Belum ada paket iklan.</td></tr>`;
                 }
@@ -358,40 +421,42 @@
 
         function openAdPackageModal(id = null, pkg = {}) {
             const modal = document.getElementById('main-modal');
+            const formattedPrice = pkg.price ? 'Rp ' + pkg.price.toLocaleString('id-ID') : '';
             modal.querySelector('#modal-title').textContent = id ? 'Ubah Paket Iklan' : 'Tambah Paket Iklan Baru';
             modal.querySelector('#modal-body').innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label for="modal-input-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
-                            <input type="text" id="modal-input-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-input-type" class="block mb-2 text-sm font-medium">Tipe</label>
-                            <select id="modal-input-type" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5">
-                                <option value="Standard" ${pkg.type === 'Standard' ? 'selected' : ''}>Standard</option>
-                                <option value="Highlighted" ${pkg.type === 'Highlighted' ? 'selected' : ''}>Highlighted</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="modal-input-price" class="block mb-2 text-sm font-medium">Harga</label>
-                            <input type="number" id="modal-input-price" value="${pkg.price || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="0" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-input-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
-                            <input type="number" id="modal-input-duration" value="${pkg.durationDays || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                    </div>`;
+                        <div class="space-y-4">
+                            <div>
+                                <label for="modal-input-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
+                                <input type="text" id="modal-input-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-input-type" class="block mb-2 text-sm font-medium">Tipe</label>
+                                <select id="modal-input-type" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5">
+                                    <option value="Standard" ${pkg.type === 'Standard' ? 'selected' : ''}>Standard</option>
+                                    <option value="Highlighted" ${pkg.type === 'Highlighted' ? 'selected' : ''}>Highlighted</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="modal-input-price" class="block mb-2 text-sm font-medium">Harga</label>
+                                <input type="text" id="modal-input-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-input-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
+                                <input type="number" id="modal-input-duration" value="${pkg.durationDays || 0}" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                        </div>`;
             modal.querySelector('#modal-save-btn').onclick = () => saveAdPackage(id);
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
         async function saveAdPackage(id) {
             const name = document.getElementById('modal-input-name').value;
             const type = document.getElementById('modal-input-type').value;
-            const price = parseInt(document.getElementById('modal-input-price').value);
+            const price = getRawPrice('modal-input-price');
             const durationDays = parseInt(document.getElementById('modal-input-duration').value);
 
-            if (!name || price < 0 || durationDays < 1) {
+            if (!name || isNaN(price) || price < 0 || isNaN(durationDays) || durationDays < 1) {
                 Swal.fire('Peringatan', 'Harap isi semua kolom dengan benar.', 'warning');
                 return;
             }
@@ -430,6 +495,7 @@
             });
         }
 
+        // --- PREMIUM PACKAGES ---
         async function loadPremiumPackagesData() {
             const tableBody = document.getElementById('premium-packages-table-body');
             tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Memuat data...</td></tr>`;
@@ -437,17 +503,17 @@
                 const response = await fetchWithAuth('/api/premium-packages');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(pkg => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
-                                <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
-                                <td class="px-6 py-4">${pkg.durationDays}</td>
-                                <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pkg.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${pkg.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
-                                <td class="px-6 py-4 text-right space-x-4">
-                                    <button onclick='openPremiumPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="font-medium text-blue-600 hover:underline">Ubah</button>
-                                    <button onclick="deletePremiumPackage(${pkg.id})" class="font-medium text-red-600 hover:underline">Hapus</button>
-                                </td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
+                                    <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
+                                    <td class="px-6 py-4">${pkg.durationDays}</td>
+                                    <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pkg.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${pkg.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <button onclick='openPremiumPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
+                                        <button onclick="deletePremiumPackage(${pkg.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Belum ada paket premium.</td></tr>`;
                 }
@@ -458,41 +524,43 @@
 
         function openPremiumPackageModal(id = null, pkg = {}) {
             const modal = document.getElementById('main-modal');
+            const formattedPrice = pkg.price ? 'Rp ' + pkg.price.toLocaleString('id-ID') : '';
             modal.querySelector('#modal-title').textContent = id ? 'Ubah Paket Premium' : 'Tambah Paket Premium Baru';
             modal.querySelector('#modal-body').innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label for="modal-premium-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
-                            <input type="text" id="modal-premium-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-premium-price" class="block mb-2 text-sm font-medium">Harga</label>
-                            <input type="number" id="modal-premium-price" value="${pkg.price || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="0" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-premium-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
-                            <input type="number" id="modal-premium-duration" value="${pkg.durationDays || 0}" onkeydown="return event.keyCode >= 48 && event.keyCode <= 57 || event.keyCode_8" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                         <div>
-                             <label class="relative inline-flex items-center cursor-pointer">
-                               <input type="checkbox" id="modal-premium-active" class="sr-only peer" ${pkg.isActive === undefined || pkg.isActive ? 'checked' : ''}>
-                               <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                               <span class="ml-3 text-sm font-medium text-gray-900">Aktif</span>
-                             </label>
-                        </div>
-                    </div>`;
+                        <div class="space-y-4">
+                            <div>
+                                <label for="modal-premium-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
+                                <input type="text" id="modal-premium-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-premium-price" class="block mb-2 text-sm font-medium">Harga</label>
+                                <input type="text" id="modal-premium-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-premium-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
+                                <input type="number" id="modal-premium-duration" value="${pkg.durationDays || 0}" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                             <div>
+                                 <label class="relative inline-flex items-center cursor-pointer">
+                                   <input type="checkbox" id="modal-premium-active" class="sr-only peer" ${pkg.isActive === undefined || pkg.isActive ? 'checked' : ''}>
+                                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                   <span class="ml-3 text-sm font-medium text-gray-900">Aktif</span>
+                                 </label>
+                            </div>
+                        </div>`;
 
             modal.querySelector('#modal-save-btn').onclick = () => savePremiumPackage(id);
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
         async function savePremiumPackage(id) {
             const name = document.getElementById('modal-premium-name').value;
-            const price = parseInt(document.getElementById('modal-premium-price').value);
+            const price = getRawPrice('modal-premium-price');
             const durationDays = parseInt(document.getElementById('modal-premium-duration').value);
             const isActive = document.getElementById('modal-premium-active').checked;
 
-            if (!name || price < 0 || durationDays < 1) {
+            if (!name || isNaN(price) || price < 0 || isNaN(durationDays) || durationDays < 1) {
                 Swal.fire('Peringatan', 'Harap isi semua kolom dengan benar.', 'warning');
                 return;
             }
