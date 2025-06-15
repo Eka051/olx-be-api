@@ -30,12 +30,4 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.10.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EditorConfigFiles Remove="D:\PBM\paa\olx-be-api\.editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="D:\PBM\paa\olx-be-api\.editorconfig" />
-  </ItemGroup>
-
 </Project>
