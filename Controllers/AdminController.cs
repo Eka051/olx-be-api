@@ -27,6 +27,8 @@ namespace olx_be_api.Controllers
         [HttpGet("stats")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDashboardStats()
         {
             var totalUsers = await _context.Users.CountAsync(u => !u.UserRoles.Any(r => r.Role.Name == "Admin"));
@@ -50,6 +52,8 @@ namespace olx_be_api.Controllers
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<List<UserProfileDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _context.Users
@@ -73,6 +77,8 @@ namespace olx_be_api.Controllers
         [HttpGet("growth-chart")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetGrowthChartData()
         {
             var sixMonthsAgo = DateTime.UtcNow.AddMonths(-5).Date;

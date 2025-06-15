@@ -55,14 +55,14 @@ namespace olx_be_api.Controllers
             });
         }
 
-        [HttpGet("chatroom/{chatRoomId}")]
+        [HttpGet("chatroom/{id}")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMessagesByChatRoom(Guid chatRoomId)
+        public async Task<IActionResult> GetMessagesByChatRoom(Guid id)
         {
             var userId = User.GetUserId();
             if (userId == Guid.Empty)
@@ -75,7 +75,7 @@ namespace olx_be_api.Controllers
             }
 
             var chatRoom = await _context.ChatRooms
-                .FirstOrDefaultAsync(c => c.Id == chatRoomId && (c.BuyerId == userId || c.SellerId == userId));
+                .FirstOrDefaultAsync(c => c.Id == id && (c.BuyerId == userId || c.SellerId == userId));
 
             if (chatRoom == null)
             {
@@ -87,7 +87,7 @@ namespace olx_be_api.Controllers
             }
 
             var messages = await _context.Messages
-                .Where(m => m.ChatRoomId == chatRoomId)
+                .Where(m => m.ChatRoomId == id)
                 .OrderBy(m => m.CreatedAt)
                 .ToListAsync();
 
@@ -410,14 +410,14 @@ namespace olx_be_api.Controllers
                 });
         }
 
-        [HttpPatch("read/{messageId}")]
+        [HttpPatch("read/{id}")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> MarkMessageAsRead(Guid messageId)
+        public async Task<IActionResult> MarkMessageAsRead(Guid id)
         {
             var userId = User.GetUserId();
             if (userId == Guid.Empty)
@@ -431,7 +431,7 @@ namespace olx_be_api.Controllers
 
             var message = await _context.Messages
                 .Include(m => m.ChatRoom)
-                .FirstOrDefaultAsync(m => m.Id == messageId);
+                .FirstOrDefaultAsync(m => m.Id == id);
 
             if (message == null)
             {
