@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using olx_be_api.Data;
 using olx_be_api.DTO;
 using olx_be_api.Helpers;
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -12,25 +11,19 @@ using System.Threading.Tasks;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/admin")]
     [ApiController]
+    [Route("api/admin")]
     [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly IWebHostEnvironment _env;
 
-        public AdminController(AppDbContext context, IWebHostEnvironment env)
+        public AdminController(AppDbContext context)
         {
             _context = context;
-            _env = env;
         }
 
         [HttpGet("stats")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDashboardStats()
         {
             var totalUsers = await _context.Users.CountAsync(u => !u.UserRoles.Any(r => r.Role.Name == "Admin"));
@@ -51,24 +44,7 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<object> { success = true, data = stats });
         }
 
-        [HttpGet("/admin")]
-        [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        public IActionResult AdminLoginPage()
-        {
-            var filePath = Path.Combine(_env.WebRootPath, "admin", "login.html");
-            if (System.IO.File.Exists(filePath))
-            {
-                return PhysicalFile(filePath, "text/html");
-            }
-            return NotFound("Halaman login admin tidak ditemukan.");
-        }
-
         [HttpGet("users")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(ApiResponse<List<UserProfileDTO>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _context.Users
@@ -90,10 +66,6 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet("growth-chart")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetGrowthChartData()
         {
             var sixMonthsAgo = DateTime.UtcNow.AddMonths(-5).Date;

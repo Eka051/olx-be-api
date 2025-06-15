@@ -2,7 +2,6 @@ using API_Manajemen_Barang.Middleware;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -14,21 +13,15 @@ using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IGeocodingService, GoogleGeocodingService>();
-
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(option =>
 {
-    option.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "OLX Backend API",
-        Version = "v1"
-    });
-
+    option.SwaggerDoc("v1", new OpenApiInfo { Title = "OLX Backend API", Version = "v1" });
     option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -38,26 +31,19 @@ builder.Services.AddSwaggerGen(option =>
         BearerFormat = "JWT",
         Scheme = "Bearer"
     });
-
     option.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             new string[] {}
         }
     });
 });
-
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -73,7 +59,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = ClaimTypes.Role
         };
     });
-
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
 builder.Services.AddScoped<IDokuService, DokuService>();
@@ -99,17 +84,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
-
 app.UseHttpsRedirection();
-
-var rewriteOptions = new RewriteOptions()
-    .AddRewrite("^admin/?$", "admin/login.html", skipRemainingRules: true);
-app.UseRewriter(rewriteOptions);
-
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
