@@ -21,6 +21,9 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<List<CartResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetCart()
         {
             var userId = User.GetUserId();
@@ -57,6 +60,11 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddToCart([FromBody] CartCreateDTO cartCreateDto)
         {
             if (!ModelState.IsValid)
@@ -68,13 +76,13 @@ namespace olx_be_api.Controllers
             var adPackage = await _context.AdPackages.FindAsync(cartCreateDto.AdPackageId);
             if (adPackage == null)
             {
-                return BadRequest(new ApiErrorResponse { success = false, message = "Paket iklan tidak ditemukan" });
+                return NotFound(new ApiErrorResponse { success = false, message = "Paket iklan tidak ditemukan" });
             }
 
             var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == cartCreateDto.ProductId && p.UserId == userId);
             if (product == null)
             {
-                return BadRequest(new ApiErrorResponse { success = false, message = "Produk tidak ditemukan atau bukan milik Anda." });
+                return NotFound(new ApiErrorResponse { success = false, message = "Produk tidak ditemukan atau bukan milik Anda." });
             }
 
             var existingCartItem = await _context.CartItems
@@ -98,10 +106,14 @@ namespace olx_be_api.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new ApiResponse<string> { success = true, message = "Berhasil menambahkan ke keranjang" });
+            return Created("", new ApiResponse<string> { success = true, message = "Berhasil menambahkan ke keranjang" });
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> RemoveFromCart(Guid id)
         {
             var userId = User.GetUserId();

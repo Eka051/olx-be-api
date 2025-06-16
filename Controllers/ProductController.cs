@@ -42,38 +42,24 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetProducts(
-            [FromQuery] string? searchTerm, [FromQuery] int? categoryId, [FromQuery] int? cityId,
-            [FromQuery] int? minPrice, [FromQuery] int? maxPrice, [FromQuery] string? sortBy,
-            [FromQuery] bool isDescending = false)
+            [FromQuery] string? searchTerm, [FromQuery] int? cityId)
         {
             var query = _context.Products
                 .Include(p => p.ProductImages)
-                .Include(p => p.Category)
                 .Include(p => p.Location).ThenInclude(l => l.City)
-                .Include(p => p.Location).ThenInclude(l => l.Province)
-                .Include(p => p.Location).ThenInclude(l => l.District)
                 .Where(p => !p.IsSold)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                query = query.Where(p => p.Title.Contains(searchTerm) || (p.Description != null && p.Description.Contains(searchTerm)));
+                query = query.Where(p => p.Title.Contains(searchTerm));
             }
-            if (categoryId.HasValue) query = query.Where(p => p.CategoryId == categoryId.Value);
-            if (cityId.HasValue) query = query.Where(p => p.Location.CityId == cityId.Value);
-            if (minPrice.HasValue) query = query.Where(p => p.Price >= minPrice.Value);
-            if (maxPrice.HasValue) query = query.Where(p => p.Price <= maxPrice.Value);
-
-            switch (sortBy?.ToLower())
+            if (cityId.HasValue)
             {
-                case "price":
-                    query = isDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price);
-                    break;
-                case "date":
-                default:
-                    query = isDescending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt);
-                    break;
+                query = query.Where(p => p.Location.CityId == cityId.Value);
             }
 
             var products = await query.Select(p => new ProductResponseDTO
@@ -85,20 +71,17 @@ namespace olx_be_api.Controllers
                 IsSold = p.IsSold,
                 CreatedAt = p.CreatedAt,
                 Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
-                CategoryId = p.CategoryId ?? 0,
-                CategoryName = p.Category != null ? p.Category.Name : "N/A",
-                ProvinceId = p.Location.ProvinceId,
-                ProvinceName = p.Location.Province!.name,
                 CityId = p.Location.CityId,
                 CityName = p.Location.City!.Name,
-                DistrictId = p.Location.DistrictId,
-                DistrictName = p.Location.District!.Name,
             }).ToListAsync();
 
             return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = "Products retrieved successfully", data = products });
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<ProductResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetProductById(long id)
         {
             var product = await _context.Products
@@ -139,6 +122,10 @@ namespace olx_be_api.Controllers
 
         [HttpPost]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<ProductResponseDTO>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDTO productDTO)
         {
             if (!ModelState.IsValid)
@@ -204,6 +191,11 @@ namespace olx_be_api.Controllers
 
         [HttpPut("{id}")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateProduct(long id, [FromForm] UpdateProductDTO productDTO)
         {
             var userId = User.GetUserId();
@@ -257,6 +249,10 @@ namespace olx_be_api.Controllers
 
         [HttpPatch("{id}/sold")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> MarkAsSold(long id)
         {
             var userId = User.GetUserId();
@@ -276,6 +272,10 @@ namespace olx_be_api.Controllers
 
         [HttpDelete("{id}")]
         [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteProduct(long id)
         {
             var userId = User.GetUserId();
@@ -303,7 +303,7 @@ namespace olx_be_api.Controllers
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
-            return Ok(new ApiResponse<string> { success = true, message = "Berhasil menghapus produk/iklan" });
+            return NoContent();
         }
     }
 }

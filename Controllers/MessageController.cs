@@ -12,13 +12,14 @@ using System;
 
 namespace olx_be_api.Controllers
 {
-    [Route("api/messages")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class MessageController : ControllerBase
+    public class MessagesController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly IHubContext<ChatHub> _hubContext;
-        public MessageController(AppDbContext context, IHubContext<ChatHub> hubContext)
+
+        public MessagesController(AppDbContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
             _hubContext = hubContext;
@@ -26,43 +27,37 @@ namespace olx_be_api.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult GetAllMessages()
+        public async Task<IActionResult> GetMessages()
         {
-            var messages = _context.Messages.ToList();
-            if (messages.Count == 0)
+            var messages = await _context.Messages.ToListAsync();
+
+            var response = messages.Select(m => new MessageResponseDto
             {
-                return NotFound(new ApiErrorResponse
-                {
-                    success = false,
-                    message = "Tidak ada pesan ditemukan"
-                });
-            }
+                Id = m.Id,
+                Content = m.Content,
+                SenderId = m.SenderId,
+                ChatRoomId = m.ChatRoomId,
+                IsRead = m.IsRead,
+                CreatedAt = m.CreatedAt
+            }).ToList();
+
             return Ok(new ApiResponse<List<MessageResponseDto>>
             {
                 success = true,
-                message = "Berhasil mengambil pesan",
-                data = messages.Select(m => new MessageResponseDto
-                {
-                    Id = m.Id,
-                    Content = m.Content,
-                    SenderId = m.SenderId,
-                    ChatRoomId = m.ChatRoomId,
-                    IsRead = m.IsRead,
-                    CreatedAt = m.CreatedAt
-                }).ToList()
+                message = "Messages retrieved successfully",
+                data = response
             });
         }
 
-        [HttpGet("chatroom/{id}")]
+        [HttpGet("{id}")]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMessagesByChatRoom(Guid id)
+        public async Task<IActionResult> GetMessage(Guid id)
         {
             var userId = User.GetUserId();
             if (userId == Guid.Empty)
@@ -70,57 +65,41 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
+                    message = "Authentication required"
                 });
             }
 
-            var chatRoom = await _context.ChatRooms
-                .FirstOrDefaultAsync(c => c.Id == id && (c.BuyerId == userId || c.SellerId == userId));
+            var message = await _context.Messages
+                .Include(m => m.ChatRoom)
+                .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (chatRoom == null)
+            if (message == null)
             {
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Ruang chat tidak ditemukan atau Anda tidak memiliki akses."
+                    message = "Message not found"
                 });
             }
 
-            var messages = await _context.Messages
-                .Where(m => m.ChatRoomId == id)
-                .OrderBy(m => m.CreatedAt)
-                .ToListAsync();
-
-            if (messages.Count == 0)
+            if (message.ChatRoom.BuyerId != userId && message.ChatRoom.SellerId != userId)
             {
-                return Ok(new ApiResponse<List<MessageResponseDto>>
-                {
-                    success = true,
-                    message = "Belum ada pesan dalam ruang chat ini.",
-                    data = new List<MessageResponseDto>()
-                });
+                return Forbid("Akses ditolak");
             }
 
-            var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != userId).ToList();
-            if (unreadMessages.Any())
-            {
-                unreadMessages.ForEach(m => m.IsRead = true);
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new ApiResponse<List<MessageResponseDto>>
+            return Ok(new ApiResponse<MessageResponseDto>
             {
                 success = true,
-                message = "Berhasil mengambil pesan ruang chat.",
-                data = messages.Select(m => new MessageResponseDto
+                message = "Message retrieved successfully",
+                data = new MessageResponseDto
                 {
-                    Id = m.Id,
-                    Content = m.Content,
-                    SenderId = m.SenderId,
-                    ChatRoomId = m.ChatRoomId,
-                    IsRead = m.IsRead,
-                    CreatedAt = m.CreatedAt
-                }).ToList()
+                    Id = message.Id,
+                    Content = message.Content,
+                    SenderId = message.SenderId,
+                    ChatRoomId = message.ChatRoomId,
+                    IsRead = message.IsRead,
+                    CreatedAt = message.CreatedAt
+                }
             });
         }
 
@@ -129,17 +108,16 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SendMessage([FromBody] CreateMessageDto createMessageDto)
+        public async Task<IActionResult> CreateMessage([FromBody] CreateMessageDto createMessageDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Data pesan tidak valid",
+                    message = "Invalid message data",
                     errors = ModelState
                 });
             }
@@ -150,7 +128,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
+                    message = "Authentication required"
                 });
             }
 
@@ -163,7 +141,7 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Ruang chat tidak ditemukan atau Anda tidak memiliki akses."
+                    message = "Chat room not found or access denied"
                 });
             }
 
@@ -178,6 +156,7 @@ namespace olx_be_api.Controllers
             };
 
             await _context.Messages.AddAsync(message);
+
             var recipientId = chatRoom.BuyerId == userId ? chatRoom.SellerId : chatRoom.BuyerId;
             var sender = await _context.Users.FindAsync(userId);
 
@@ -185,7 +164,7 @@ namespace olx_be_api.Controllers
             {
                 Id = Guid.NewGuid(),
                 UserId = recipientId,
-                Title = $"Pesan Baru dari {sender?.Name ?? "Seseorang"}",
+                Title = $"New message from {sender?.Name ?? "Someone"}",
                 Message = message.Content,
                 IsRead = false,
                 CreatedAt = DateTime.UtcNow
@@ -208,21 +187,23 @@ namespace olx_be_api.Controllers
                 .Group(chatRoom.Id.ToString())
                 .SendAsync("ReceiveMessage", messageResponse);
 
-            return CreatedAtAction(nameof(GetMessagesByChatRoom), new { chatRoomId = message.ChatRoomId },
-            new ApiResponse<MessageResponseDto>
-            {
-                success = true,
-                message = "Pesan berhasil dikirim",
-                data = messageResponse
-            });
+            return CreatedAtAction(nameof(GetMessage), new { id = message.Id },
+                new ApiResponse<MessageResponseDto>
+                {
+                    success = true,
+                    message = "Message created successfully",
+                    data = messageResponse
+                });
         }
 
-        [HttpGet("user/chats")]
+        [HttpPatch("{id}/read")]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<List<ChatRoomResponseDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetUserChatRooms()
+        public async Task<IActionResult> MarkAsRead(Guid id)
         {
             var userId = User.GetUserId();
             if (userId == Guid.Empty)
@@ -230,7 +211,137 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
+                    message = "Authentication required"
+                });
+            }
+
+            var message = await _context.Messages
+                .Include(m => m.ChatRoom)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (message == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Message not found"
+                });
+            }
+
+            if (message.ChatRoom.BuyerId != userId && message.ChatRoom.SellerId != userId)
+            {
+                return Forbid("Akses ditolak");
+            }
+
+            if (message.SenderId != userId)
+            {
+                message.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new ApiResponse<MessageResponseDto>
+            {
+                success = true,
+                message = "Message marked as read",
+                data = new MessageResponseDto
+                {
+                    Id = message.Id,
+                    Content = message.Content,
+                    SenderId = message.SenderId,
+                    ChatRoomId = message.ChatRoomId,
+                    IsRead = message.IsRead,
+                    CreatedAt = message.CreatedAt
+                }
+            });
+        }
+    }
+
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ChatRoomsController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public ChatRoomsController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet("{id}/messages")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetMessages(Guid id)
+        {
+            var userId = User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Unauthorized(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Authentication required"
+                });
+            }
+
+            var chatRoom = await _context.ChatRooms
+                .FirstOrDefaultAsync(c => c.Id == id && (c.BuyerId == userId || c.SellerId == userId));
+
+            if (chatRoom == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Chat room not found or access denied"
+                });
+            }
+
+            var messages = await _context.Messages
+                .Where(m => m.ChatRoomId == id)
+                .OrderBy(m => m.CreatedAt)
+                .ToListAsync();
+
+            var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != userId).ToList();
+            if (unreadMessages.Any())
+            {
+                unreadMessages.ForEach(m => m.IsRead = true);
+                await _context.SaveChangesAsync();
+            }
+
+            var response = messages.Select(m => new MessageResponseDto
+            {
+                Id = m.Id,
+                Content = m.Content,
+                SenderId = m.SenderId,
+                ChatRoomId = m.ChatRoomId,
+                IsRead = m.IsRead,
+                CreatedAt = m.CreatedAt
+            }).ToList();
+
+            return Ok(new ApiResponse<List<MessageResponseDto>>
+            {
+                success = true,
+                message = "Messages retrieved successfully",
+                data = response
+            });
+        }
+
+        [HttpGet]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<List<ChatRoomResponseDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetChatRooms()
+        {
+            var userId = User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Unauthorized(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Authentication required"
                 });
             }
 
@@ -242,16 +353,6 @@ namespace olx_be_api.Controllers
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
-            if (chatRooms.Count == 0)
-            {
-                return Ok(new ApiResponse<List<ChatRoomResponseDto>>
-                {
-                    success = true,
-                    message = "Anda tidak memiliki chat yang aktif",
-                    data = new List<ChatRoomResponseDto>()
-                });
-            }
-
             var chatRoomIds = chatRooms.Select(c => c.Id).ToList();
             var messagesQuery = _context.Messages
                 .Where(m => chatRoomIds.Contains(m.ChatRoomId))
@@ -259,6 +360,7 @@ namespace olx_be_api.Controllers
 
             var lastMessages = await messagesQuery
                 .Select(g => g.OrderByDescending(m => m.CreatedAt).FirstOrDefault())
+                .Where(m => m != null)
                 .ToDictionaryAsync(m => m!.ChatRoomId, m => m);
 
             var unreadCounts = await messagesQuery
@@ -287,12 +389,12 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<List<ChatRoomResponseDto>>
             {
                 success = true,
-                message = "Berhasil mengambil pesan",
+                message = "Chat rooms retrieved successfully",
                 data = response
             });
         }
 
-        [HttpPost("chatroom")]
+        [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<ChatRoomResponseDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
@@ -306,7 +408,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Data pesan tidak valid",
+                    message = "Invalid chat room data",
                     errors = ModelState
                 });
             }
@@ -317,7 +419,7 @@ namespace olx_be_api.Controllers
                 return Unauthorized(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
+                    message = "Authentication required"
                 });
             }
 
@@ -327,7 +429,7 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Produk tidak ditemukan"
+                    message = "Product not found"
                 });
             }
 
@@ -338,7 +440,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse
                 {
                     success = false,
-                    message = "Anda tidak memulai pesan dengan produk anda sendiri"
+                    message = "Cannot create chat room with your own product"
                 });
             }
 
@@ -352,7 +454,7 @@ namespace olx_be_api.Controllers
                 return Ok(new ApiResponse<ChatRoomResponseDto>
                 {
                     success = true,
-                    message = "Ruang pesan sudah ada",
+                    message = "Chat room already exists",
                     data = new ChatRoomResponseDto
                     {
                         Id = existingChat.Id,
@@ -393,11 +495,11 @@ namespace olx_be_api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return CreatedAtAction(nameof(GetMessagesByChatRoom), new { chatRoomId = chatRoom.Id },
+            return CreatedAtAction(nameof(GetMessages), new { id = chatRoom.Id },
                 new ApiResponse<ChatRoomResponseDto>
                 {
                     success = true,
-                    message = "Berhasil membuat ruang pesan",
+                    message = "Chat room created successfully",
                     data = new ChatRoomResponseDto
                     {
                         Id = chatRoom.Id,
@@ -408,65 +510,6 @@ namespace olx_be_api.Controllers
                         CreatedAt = chatRoom.CreatedAt
                     }
                 });
-        }
-
-        [HttpPatch("read/{id}")]
-        [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<MessageResponseDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> MarkMessageAsRead(Guid id)
-        {
-            var userId = User.GetUserId();
-            if (userId == Guid.Empty)
-            {
-                return Unauthorized(new ApiErrorResponse
-                {
-                    success = false,
-                    message = "Belum terautentikasi. Silahkan login terlebih dahulu!"
-                });
-            }
-
-            var message = await _context.Messages
-                .Include(m => m.ChatRoom)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (message == null)
-            {
-                return NotFound(new ApiErrorResponse
-                {
-                    success = false,
-                    message = "Pesan tidak ditemukan"
-                });
-            }
-
-            if (message.ChatRoom.BuyerId != userId && message.ChatRoom.SellerId != userId)
-            {
-                return Forbid();
-            }
-
-            if (message.SenderId != userId)
-            {
-                message.IsRead = true;
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new ApiResponse<MessageResponseDto>
-            {
-                success = true,
-                message = "Pesan ditandai dibaca",
-                data = new MessageResponseDto
-                {
-                    Id = message.Id,
-                    Content = message.Content,
-                    SenderId = message.SenderId,
-                    ChatRoomId = message.ChatRoomId,
-                    IsRead = message.IsRead,
-                    CreatedAt = message.CreatedAt
-                }
-            });
         }
     }
 }

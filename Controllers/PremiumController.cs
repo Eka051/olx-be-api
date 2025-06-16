@@ -174,7 +174,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpDelete("premium-packages/{id}")]
-        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeletePremiumPackage(int id)
@@ -192,12 +192,7 @@ namespace olx_be_api.Controllers
             _context.PremiumPackages.Remove(package);
             await _context.SaveChangesAsync();
 
-            return Ok(new ApiResponse<string>
-            {
-                success = true,
-                message = "Berhasil menghapus paket premium.",
-                data = $"Paket dengan ID {id} telah dihapus."
-            });
+            return NoContent();
         }
     }
 }
