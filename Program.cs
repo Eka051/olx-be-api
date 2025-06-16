@@ -85,6 +85,9 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseHttpsRedirection();
+
+app.UseDefaultFiles();
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
