@@ -1,15 +1,21 @@
 ﻿using olx_be_api.Models;
+using olx_be_api.Models.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace olx_be_api.DTO
 {
+    public class AdPackageFeatureDTO
+    {
+        public AdFeatureType FeatureType { get; set; }
+        public int Quantity { get; set; }
+        public int DurationDays { get; set; }
+    }
     public class AdPackageDTO
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
-        public AdPackageType Type { get; set; }
         public int Price { get; set; }
-        public int DurationDays { get; set; }
+        public List<AdPackageFeatureDTO> Features { get; set; } = new List<AdPackageFeatureDTO>();
     }
 
     public class CreateAdPackageDTO
@@ -17,19 +23,15 @@ namespace olx_be_api.DTO
         [Required]
         public string Name { get; set; } = null!;
         [Required]
-        public AdPackageType Type { get; set; }
         [Range(0, int.MaxValue)]
         public int Price { get; set; }
-        [Range(1, 366)]
-        public int DurationDays { get; set; }
+        public List<AdPackageFeatureDTO> Features { get; set; } = new List<AdPackageFeatureDTO>();
     }
 
     public class UpdateAdPackageDTO
     {
         [Required]
         public string Name { get; set; } = null!;
-        [Required]
-        public AdPackageType Type { get; set; }
         [Range(0, int.MaxValue)]
         public int Price { get; set; }
         [Range(1, 366)]

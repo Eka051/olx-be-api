@@ -62,6 +62,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
 builder.Services.AddScoped<IDokuService, DokuService>();
+builder.Services.AddScoped<IStorageService, SupabaseStorageService>();
 
 FirebaseAppHelper.Initialize();
 

@@ -22,7 +22,7 @@ namespace olx_be_api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("olx_be_api.Models.AdPackage", b =>
+            modelBuilder.Entity("olx_be_api.Models.ActiveProductFeature", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -31,9 +31,40 @@ namespace olx_be_api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("DurationDays")
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiry_date");
+
+                    b.Property<string>("FeatureType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("feature_type");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("product_id");
+
+                    b.Property<int>("RemainingQuantity")
                         .HasColumnType("integer")
-                        .HasColumnName("duration_days");
+                        .HasColumnName("remaining_quantity");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_active_product_features");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("i_x_active_product_features_product_id");
+
+                    b.ToTable("active_product_features");
+                });
+
+            modelBuilder.Entity("olx_be_api.Models.AdPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -44,15 +75,45 @@ namespace olx_be_api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("price");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("type");
-
                     b.HasKey("Id")
                         .HasName("p_k_ad_packages");
 
                     b.ToTable("ad_packages");
+                });
+
+            modelBuilder.Entity("olx_be_api.Models.AdPackageFeature", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AdPackageId")
+                        .HasColumnType("integer")
+                        .HasColumnName("ad_package_id");
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_days");
+
+                    b.Property<string>("FeatureType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("feature_type");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_ad_package_features");
+
+                    b.HasIndex("AdPackageId")
+                        .HasDatabaseName("i_x_ad_package_features_ad_package_id");
+
+                    b.ToTable("ad_package_features");
                 });
 
             modelBuilder.Entity("olx_be_api.Models.CartItem", b =>
@@ -412,6 +473,11 @@ namespace olx_be_api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
                     b.Property<int>("DurationDays")
                         .HasColumnType("integer")
                         .HasColumnName("duration_days");
@@ -419,11 +485,6 @@ namespace olx_be_api.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
 
                     b.Property<int>("Price")
                         .HasColumnType("integer")
@@ -448,10 +509,6 @@ namespace olx_be_api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
-
-                    b.Property<int>("CurrentPackageType")
-                        .HasColumnType("integer")
-                        .HasColumnName("current_package_type");
 
                     b.Property<string>("Description")
                         .HasColumnType("text")
@@ -737,6 +794,30 @@ namespace olx_be_api.Migrations
                     b.ToTable("user_roles");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.ActiveProductFeature", b =>
+                {
+                    b.HasOne("olx_be_api.Models.Product", "Product")
+                        .WithMany("ActiveFeatures")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_active_product_features__products_product_id");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("olx_be_api.Models.AdPackageFeature", b =>
+                {
+                    b.HasOne("olx_be_api.Models.AdPackage", "AdPackage")
+                        .WithMany("Features")
+                        .HasForeignKey("AdPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_ad_package_features_ad_packages_ad_package_id");
+
+                    b.Navigation("AdPackage");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.CartItem", b =>
                 {
                     b.HasOne("olx_be_api.Models.AdPackage", "AdPackage")
@@ -914,7 +995,7 @@ namespace olx_be_api.Migrations
             modelBuilder.Entity("olx_be_api.Models.Product", b =>
                 {
                     b.HasOne("olx_be_api.Models.Category", "Category")
-                        .WithMany()
+                        .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("f_k_products_categories_category_id");
@@ -984,6 +1065,16 @@ namespace olx_be_api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("olx_be_api.Models.AdPackage", b =>
+                {
+                    b.Navigation("Features");
+                });
+
+            modelBuilder.Entity("olx_be_api.Models.Category", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("olx_be_api.Models.ChatRoom", b =>
                 {
                     b.Navigation("Messages");
@@ -1001,6 +1092,8 @@ namespace olx_be_api.Migrations
 
             modelBuilder.Entity("olx_be_api.Models.Product", b =>
                 {
+                    b.Navigation("ActiveFeatures");
+
                     b.Navigation("FavoritedBy");
 
                     b.Navigation("ProductImages");

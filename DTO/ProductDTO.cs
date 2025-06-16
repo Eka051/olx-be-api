@@ -8,7 +8,7 @@
         public int CategoryId { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public List<string> Images { get; set; } = new List<string>();
+        public List<IFormFile> Images { get; set; } = new List<IFormFile>();
     }
 
     public class ProductResponseDTO
@@ -19,9 +19,9 @@
         public int Price { get; set; }
         public bool IsSold { get; set; } = false;
         public DateTime CreatedAt { get; set; }
-        public List<string> Images { get; set; } = new List<string>();
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = null!;
+        public List<string> Images { get; set; } = new List<string>();
 
         public int? ProvinceId { get; set; }
         public string? ProvinceName { get; set; }
@@ -40,6 +40,8 @@
 
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public List<string>? Images { get; set; }
+        public List<string>? UrlsToDelete { get; set; } = new List<string>();
+
+        public List<IFormFile>? NewImages { get; set; } = new List<IFormFile>();
     }
 }
