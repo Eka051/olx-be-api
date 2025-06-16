@@ -21,32 +21,76 @@ namespace olx_be_api.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<List<CategoryResponseDto>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult GetAllCategories()
         {
-            var categories = _context.Categories.ToList();
-            var response = categories.Select(c => new CategoryResponseDto
+            try
             {
-                Id = c.Id,
-                Name = c.Name,
-
-            }).ToList();
-            if (response.Count == 0)
-            {
-                return NotFound(new ApiErrorResponse
+                var categories = _context.Categories.ToList();
+                var response = categories.Select(c => new CategoryResponseDto
                 {
-                    success = false,
-                    message = "Data kategori tidak ditemukan"
+                    Id = c.Id,
+                    Name = c.Name,
+                }).ToList();
+
+                return Ok(new ApiResponse<List<CategoryResponseDto>>
+                {
+                    success = true,
+                    message = "Berhasil mengambil data kategori",
+                    data = response
                 });
             }
-            return Ok(new ApiResponse<List<CategoryResponseDto>>
+            catch (Exception ex)
             {
-                success = true,
-                message = "Berhasil mengambil data kategori",
-                data = response
-            });
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Terjadi kesalahan internal server",
+                    errors = ex.Message
+                });
+            }
+        }
 
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<CategoryResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public IActionResult GetCategoryById(int id)
+        {
+            try
+            {
+                var category = _context.Categories.Find(id);
+                if (category == null)
+                {
+                    return NotFound(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Kategori tidak ditemukan"
+                    });
+                }
+
+                var response = new CategoryResponseDto
+                {
+                    Id = category.Id,
+                    Name = category.Name
+                };
+
+                return Ok(new ApiResponse<CategoryResponseDto>
+                {
+                    success = true,
+                    message = "Berhasil mengambil data kategori",
+                    data = response
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Terjadi kesalahan internal server",
+                    errors = ex.Message
+                });
+            }
         }
 
         [HttpPost]
@@ -54,13 +98,13 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiResponse<CategoryResponseDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse),StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult CreateCategory([FromBody] CreateCategoryDto createCategoryDto)
         {
             try
             {
-                if (createCategoryDto == null || string.IsNullOrEmpty(createCategoryDto.Name))
+                if (createCategoryDto == null || string.IsNullOrWhiteSpace(createCategoryDto.Name))
                 {
                     return BadRequest(new ApiErrorResponse
                     {
@@ -80,94 +124,100 @@ namespace olx_be_api.Controllers
                     });
                 }
 
-                var existingCategory = _context.Categories.FirstOrDefault(c => c.Name == createCategoryDto.Name);
+                var existingCategory = _context.Categories.FirstOrDefault(c => c.Name.ToLower() == createCategoryDto.Name.ToLower());
                 if (existingCategory != null)
                 {
                     return Conflict(new ApiErrorResponse
                     {
                         success = false,
-                        message = $"Kategori {existingCategory.Name} sudah ada"
+                        message = $"Kategori '{createCategoryDto.Name}' sudah ada"
                     });
                 }
 
                 var newCategory = new Category
                 {
-                    Name = createCategoryDto.Name
+                    Name = createCategoryDto.Name.Trim()
                 };
 
                 _context.Categories.Add(newCategory);
                 _context.SaveChanges();
 
+                var responseData = new CategoryResponseDto
+                {
+                    Id = newCategory.Id,
+                    Name = newCategory.Name
+                };
+
                 var response = new ApiResponse<CategoryResponseDto>
                 {
                     success = true,
                     message = "Berhasil membuat kategori baru",
-                    data = new CategoryResponseDto
-                    {
-                        Id = newCategory.Id,
-                        Name = newCategory.Name
-                    }
+                    data = responseData
                 };
 
-                return CreatedAtAction(nameof(GetAllCategories), new { id = newCategory.Id }, response);
+                return CreatedAtAction(nameof(GetCategoryById), new { id = newCategory.Id }, response);
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiErrorResponse
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
                 {
                     success = false,
-                    message = "Data invalid",
+                    message = "Terjadi kesalahan internal server",
                     errors = ex.Message
                 });
             }
         }
-        [HttpPost("batch")]
+
+        [HttpPost("bulk")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateCategories([FromBody] List<CreateCategoryDto> createCategoryDtos)
+        public IActionResult CreateCategoriesBulk([FromBody] List<CreateCategoryDto> createCategoryDtos)
         {
-            if (createCategoryDtos == null || !createCategoryDtos.Any())
+            try
             {
-                return BadRequest(new ApiErrorResponse
+                if (createCategoryDtos == null || !createCategoryDtos.Any())
                 {
-                    success = false,
-                    message = "Request body tidak boleh kosong."
-                });
-            }
-
-            var createdCategories = new List<CategoryResponseDto>();
-            var skippedCategories = new List<object>();
-            var categoriesToAdd = new List<Category>();
-
-            var existingCategoryNames = _context.Categories
-                                                .Select(c => c.Name.ToUpper())
-                                                .ToHashSet();
-
-            foreach (var dto in createCategoryDtos)
-            {
-                if (string.IsNullOrWhiteSpace(dto.Name))
-                {
-                    skippedCategories.Add(new { name = dto.Name, reason = "Nama kategori tidak boleh kosong." });
-                    continue;
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Request body tidak boleh kosong."
+                    });
                 }
 
-                var normalizedName = dto.Name.ToUpper();
-                if (existingCategoryNames.Contains(normalizedName) || categoriesToAdd.Any(c => c.Name.ToUpper() == normalizedName))
+                var createdCategories = new List<CategoryResponseDto>();
+                var skippedCategories = new List<object>();
+                var categoriesToAdd = new List<Category>();
+
+                var existingCategoryNames = _context.Categories
+                                                    .Select(c => c.Name.ToLower())
+                                                    .ToHashSet();
+
+                foreach (var dto in createCategoryDtos)
                 {
-                    skippedCategories.Add(new { name = dto.Name, reason = "Kategori sudah ada." });
-                    continue;
+                    if (string.IsNullOrWhiteSpace(dto.Name))
+                    {
+                        skippedCategories.Add(new { name = dto.Name, reason = "Nama kategori tidak boleh kosong." });
+                        continue;
+                    }
+
+                    var normalizedName = dto.Name.Trim().ToLower();
+                    if (existingCategoryNames.Contains(normalizedName) ||
+                        categoriesToAdd.Any(c => c.Name.ToLower() == normalizedName))
+                    {
+                        skippedCategories.Add(new { name = dto.Name, reason = "Kategori sudah ada." });
+                        continue;
+                    }
+
+                    var newCategory = new Category { Name = dto.Name.Trim() };
+                    categoriesToAdd.Add(newCategory);
+                    existingCategoryNames.Add(normalizedName);
                 }
 
-                categoriesToAdd.Add(new Category { Name = dto.Name });
-            }
-
-            if (categoriesToAdd.Any())
-            {
-                try
+                if (categoriesToAdd.Any())
                 {
                     _context.Categories.AddRange(categoriesToAdd);
                     _context.SaveChanges();
@@ -181,31 +231,36 @@ namespace olx_be_api.Controllers
                         });
                     }
                 }
-                catch (Exception ex)
+
+                var response = new ApiResponse<object>
                 {
-                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
+                    success = true,
+                    message = "Proses pembuatan kategori selesai.",
+                    data = new
                     {
-                        success = false,
-                        message = "Terjadi kesalahan saat menyimpan data ke database.",
-                        errors = ex.Message
-                    });
-                }
+                        created = createdCategories,
+                        skipped = skippedCategories,
+                        summary = new
+                        {
+                            totalRequested = createCategoryDtos.Count,
+                            totalCreated = createdCategories.Count,
+                            totalSkipped = skippedCategories.Count
+                        }
+                    }
+                };
+
+                return Ok(response);
             }
-
-            var response = new ApiResponse<object>
+            catch (Exception ex)
             {
-                success = true,
-                message = "Proses pembuatan kategori selesai.",
-                data = new
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
                 {
-                    created = createdCategories,
-                    skipped = skippedCategories
-                }
-            };
-
-            return Ok(response);
+                    success = false,
+                    message = "Terjadi kesalahan internal server",
+                    errors = ex.Message
+                });
+            }
         }
-
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
@@ -213,12 +268,13 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public IActionResult UpdateCategory(int id, [FromBody] UpdateCategoryDto updateCategoryDto)
         {
             try
             {
-                if (updateCategoryDto == null || string.IsNullOrEmpty(updateCategoryDto.Name))
+                if (updateCategoryDto == null || string.IsNullOrWhiteSpace(updateCategoryDto.Name))
                 {
                     return BadRequest(new ApiErrorResponse
                     {
@@ -226,6 +282,18 @@ namespace olx_be_api.Controllers
                         message = "Nama kategori tidak boleh kosong",
                     });
                 }
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Data kategori tidak valid",
+                        errors = errors
+                    });
+                }
+
                 var category = _context.Categories.Find(id);
                 if (category == null)
                 {
@@ -235,13 +303,28 @@ namespace olx_be_api.Controllers
                         message = "Kategori tidak ditemukan"
                     });
                 }
-                category.Name = updateCategoryDto.Name;
+
+                var existingCategory = _context.Categories
+                    .FirstOrDefault(c => c.Name.ToLower() == updateCategoryDto.Name.ToLower() && c.Id != id);
+
+                if (existingCategory != null)
+                {
+                    return Conflict(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = $"Kategori '{updateCategoryDto.Name}' sudah ada"
+                    });
+                }
+
+                category.Name = updateCategoryDto.Name.Trim();
                 _context.SaveChanges();
+
                 var response = new CategoryResponseDto
                 {
                     Id = category.Id,
                     Name = category.Name
                 };
+
                 return Ok(new ApiResponse<CategoryResponseDto>
                 {
                     success = true,
@@ -251,10 +334,10 @@ namespace olx_be_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiErrorResponse
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
                 {
                     success = false,
-                    message = "Data invalid",
+                    message = "Terjadi kesalahan internal server",
                     errors = ex.Message
                 });
             }
@@ -262,8 +345,7 @@ namespace olx_be_api.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -280,21 +362,18 @@ namespace olx_be_api.Controllers
                         message = "Kategori tidak ditemukan"
                     });
                 }
+
                 _context.Categories.Remove(category);
                 _context.SaveChanges();
-                return Ok(new ApiResponse<string>
-                {
-                    success = true,
-                    message = "Berhasil menghapus kategori",
-                    data = $"Kategori dengan ID {id} telah dihapus"
-                });
+
+                return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiErrorResponse
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
                 {
                     success = false,
-                    message = "Terjadi kesalahan saat menghapus kategori",
+                    message = "Terjadi kesalahan internal server",
                     errors = ex.Message
                 });
             }
