@@ -1,4 +1,6 @@
-﻿namespace olx_be_api.DTO
+﻿using Microsoft.AspNetCore.Http;
+
+namespace olx_be_api.DTO
 {
     public class UserProfileDTO
     {
@@ -15,5 +17,6 @@
     {
         public string? Name { get; set; }
         public string? PhoneNumber { get; set; }
+        public IFormFile? ProfilePicture { get; set; }
     }
 }

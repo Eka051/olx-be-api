@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace olx_be_api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewMigrations : Migration
+    public partial class MigrationV1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,9 +19,7 @@ namespace olx_be_api.Migrations
                     id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     name = table.Column<string>(type: "text", nullable: false),
-                    type = table.Column<string>(type: "text", nullable: false),
-                    price = table.Column<int>(type: "integer", nullable: false),
-                    duration_days = table.Column<int>(type: "integer", nullable: false)
+                    price = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -39,6 +37,22 @@ namespace olx_be_api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("p_k_categories", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "premium_packages",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    description = table.Column<string>(type: "text", nullable: false),
+                    price = table.Column<int>(type: "integer", nullable: false),
+                    duration_days = table.Column<int>(type: "integer", nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_premium_packages", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -68,6 +82,20 @@ namespace olx_be_api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "transaction_item_details",
+                columns: table => new
+                {
+                    ad_package_id = table.Column<int>(type: "integer", nullable: false),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
+                    price = table.Column<int>(type: "integer", nullable: false),
+                    quantity = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_transaction_item_details", x => new { x.ad_package_id, x.product_id });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
@@ -85,6 +113,28 @@ namespace olx_be_api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("p_k_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ad_package_features",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    feature_type = table.Column<string>(type: "text", nullable: false),
+                    quantity = table.Column<int>(type: "integer", nullable: false),
+                    duration_days = table.Column<int>(type: "integer", nullable: false),
+                    ad_package_id = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_ad_package_features", x => x.id);
+                    table.ForeignKey(
+                        name: "f_k_ad_package_features_ad_packages_ad_package_id",
+                        column: x => x.ad_package_id,
+                        principalTable: "ad_packages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -147,6 +197,33 @@ namespace olx_be_api.Migrations
                     table.PrimaryKey("p_k_notifications", x => x.id);
                     table.ForeignKey(
                         name: "f_k_notifications__users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "transactions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    invoice_number = table.Column<string>(type: "text", nullable: false),
+                    amount = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<string>(type: "text", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    details = table.Column<string>(type: "text", nullable: true),
+                    reference_id = table.Column<string>(type: "text", nullable: false),
+                    payment_url = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    paid_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_transactions", x => x.id);
+                    table.ForeignKey(
+                        name: "f_k_transactions__users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
                         principalColumn: "id",
@@ -240,7 +317,6 @@ namespace olx_be_api.Migrations
                     is_sold = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     expired_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    current_package_type = table.Column<int>(type: "integer", nullable: false),
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     location_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
@@ -268,14 +344,36 @@ namespace olx_be_api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "active_product_features",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
+                    feature_type = table.Column<string>(type: "text", nullable: false),
+                    expiry_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    remaining_quantity = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_active_product_features", x => x.id);
+                    table.ForeignKey(
+                        name: "f_k_active_product_features__products_product_id",
+                        column: x => x.product_id,
+                        principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "cart_items",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     ad_package_id = table.Column<int>(type: "integer", nullable: false),
-                    quantity = table.Column<int>(type: "integer", nullable: false),
-                    product_id = table.Column<long>(type: "bigint", nullable: false)
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
+                    quantity = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -381,38 +479,6 @@ namespace olx_be_api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ad_transactions",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    cart_item_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    invoice_number = table.Column<int>(type: "integer", nullable: false),
-                    amount = table.Column<int>(type: "integer", nullable: false),
-                    status = table.Column<string>(type: "text", nullable: false),
-                    payment_url = table.Column<string>(type: "text", nullable: false),
-                    paid_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("p_k_ad_transactions", x => x.id);
-                    table.ForeignKey(
-                        name: "f_k_ad_transactions__cart_items_cart_item_id",
-                        column: x => x.cart_item_id,
-                        principalTable: "cart_items",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "f_k_ad_transactions__users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "messages",
                 columns: table => new
                 {
@@ -441,14 +507,14 @@ namespace olx_be_api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "i_x_ad_transactions_cart_item_id",
-                table: "ad_transactions",
-                column: "cart_item_id");
+                name: "i_x_active_product_features_product_id",
+                table: "active_product_features",
+                column: "product_id");
 
             migrationBuilder.CreateIndex(
-                name: "i_x_ad_transactions_user_id",
-                table: "ad_transactions",
-                column: "user_id");
+                name: "i_x_ad_package_features_ad_package_id",
+                table: "ad_package_features",
+                column: "ad_package_id");
 
             migrationBuilder.CreateIndex(
                 name: "i_x_cart_items_ad_package_id",
@@ -557,6 +623,17 @@ namespace olx_be_api.Migrations
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
+                name: "i_x_transactions_invoice_number",
+                table: "transactions",
+                column: "invoice_number",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_transactions_user_id",
+                table: "transactions",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "i_x_user_roles_role_id",
                 table: "user_roles",
                 column: "role_id");
@@ -584,7 +661,13 @@ namespace olx_be_api.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ad_transactions");
+                name: "active_product_features");
+
+            migrationBuilder.DropTable(
+                name: "ad_package_features");
+
+            migrationBuilder.DropTable(
+                name: "cart_items");
 
             migrationBuilder.DropTable(
                 name: "email_otps");
@@ -599,22 +682,28 @@ namespace olx_be_api.Migrations
                 name: "notifications");
 
             migrationBuilder.DropTable(
+                name: "premium_packages");
+
+            migrationBuilder.DropTable(
                 name: "product_images");
+
+            migrationBuilder.DropTable(
+                name: "transaction_item_details");
+
+            migrationBuilder.DropTable(
+                name: "transactions");
 
             migrationBuilder.DropTable(
                 name: "user_roles");
 
             migrationBuilder.DropTable(
-                name: "cart_items");
+                name: "ad_packages");
 
             migrationBuilder.DropTable(
                 name: "chat_rooms");
 
             migrationBuilder.DropTable(
                 name: "roles");
-
-            migrationBuilder.DropTable(
-                name: "ad_packages");
 
             migrationBuilder.DropTable(
                 name: "products");
