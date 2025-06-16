@@ -14,8 +14,10 @@ namespace olx_be_api.Data
         public DbSet<EmailOtp> EmailOtps { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<ActiveProductFeature> ActiveProductFeatures { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<AdPackage> AdPackages { get; set; }
+        public DbSet<AdPackageFeature> AdPackageFeatures { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<PremiumPackage> PremiumPackages { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
@@ -64,7 +66,7 @@ namespace olx_be_api.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(p => p.Category)
-                    .WithMany()
+                    .WithMany(c => c.Products)
                     .HasForeignKey(p => p.CategoryId)
                     .OnDelete(DeleteBehavior.SetNull);
 
@@ -77,6 +79,9 @@ namespace olx_be_api.Data
                     .WithOne(f => f.Product)
                     .HasForeignKey(f => f.ProductId)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.HasMany(p => p.ActiveFeatures)
+                       .WithOne(af => af.Product)
+                       .HasForeignKey(af => af.ProductId);
             });
 
             modelBuilder.Entity<ProductImage>(entity =>
@@ -87,6 +92,18 @@ namespace olx_be_api.Data
                     .HasForeignKey(pi => pi.ProductId)
                     .HasPrincipalKey(p => p.Id)
                     .OnDelete(DeleteBehavior.Cascade);
+
+            });
+
+            modelBuilder.Entity<ActiveProductFeature>(entity =>
+            {
+                entity.HasOne(af => af.Product)
+                      .WithMany(p => p.ActiveFeatures)
+                      .HasForeignKey(af => af.ProductId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(af => af.FeatureType)
+                      .HasConversion<string>();
             });
 
             modelBuilder.Entity<ChatRoom>(entity => {
@@ -155,7 +172,7 @@ namespace olx_be_api.Data
 
             modelBuilder.Entity<TransactionItemDetail>(entity =>
             {
-                entity.HasKey(tid => new { tid.AdPackageId, tid.ProductId }); // Composite key for TransactionItemDetail
+                entity.HasKey(tid => new { tid.AdPackageId, tid.ProductId });
             });
 
             modelBuilder.Entity<UserRole>(entity =>
@@ -187,9 +204,17 @@ namespace olx_be_api.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            modelBuilder.Entity<AdPackage>()
-                .Property(p => p.Type)
-                .HasConversion<string>();
+            modelBuilder.Entity<AdPackage>(entity =>
+            {
+                entity.HasMany(p => p.Features)
+                    .WithOne(f => f.AdPackage)
+                    .HasForeignKey(f => f.AdPackageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AdPackageFeature>(entity => 
+                entity.Property(f => f.FeatureType)
+                .HasConversion<string>());
 
             modelBuilder.UseSnakeCase();
         }

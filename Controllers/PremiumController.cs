@@ -41,7 +41,7 @@ namespace olx_be_api.Controllers
             var response = packages.Select(p => new PremiumPackageResponseDTO
             {
                 Id = p.Id,
-                Name = p.Name,
+                Description = p.Description,
                 Price = p.Price,
                 DurationDays = p.DurationDays,
                 IsActive = p.IsActive
@@ -72,7 +72,7 @@ namespace olx_be_api.Controllers
             }
 
             var existingPackage = await _context.PremiumPackages
-                .FirstOrDefaultAsync(p => p.Name.ToLower() == createDto.Name);
+                .FirstOrDefaultAsync(p => p.DurationDays == createDto.DurationDays && p.Price == createDto.Price);
             if (existingPackage != null)
             {
                 return Conflict(new ApiErrorResponse
@@ -82,9 +82,9 @@ namespace olx_be_api.Controllers
                 });
             }
 
-                var package = new PremiumPackage
+            var package = new PremiumPackage
             {
-                Name = createDto.Name,
+                Description = createDto.Description!,
                 Price = createDto.Price,
                 DurationDays = createDto.DurationDays,
                 IsActive = createDto.IsActive
@@ -96,7 +96,7 @@ namespace olx_be_api.Controllers
             var response = new PremiumPackageResponseDTO
             {
                 Id = package.Id,
-                Name = package.Name,
+                Description = package.Description,
                 Price = package.Price,
                 DurationDays = package.DurationDays,
                 IsActive = package.IsActive
@@ -138,7 +138,7 @@ namespace olx_be_api.Controllers
             }
 
             var existingPackage = await _context.PremiumPackages
-                .FirstOrDefaultAsync(p => p.Name.ToLower() == updateDto.Name && p.Id != id);
+                .FirstOrDefaultAsync(p => p.DurationDays == updateDto.DurationDays && p.Price == updateDto.Price);
             if (existingPackage != null)
             {
                 return Conflict(new ApiErrorResponse
@@ -148,7 +148,7 @@ namespace olx_be_api.Controllers
                 });
             }
 
-                package.Name = updateDto.Name;
+            package.Description = updateDto.Description!;
             package.Price = updateDto.Price;
             package.DurationDays = updateDto.DurationDays;
             package.IsActive = updateDto.IsActive;
@@ -159,7 +159,7 @@ namespace olx_be_api.Controllers
             var response = new PremiumPackageResponseDTO
             {
                 Id = package.Id,
-                Name = package.Name,
+                Description = package.Description,
                 Price = package.Price,
                 DurationDays = package.DurationDays,
                 IsActive = package.IsActive

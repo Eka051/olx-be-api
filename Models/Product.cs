@@ -14,8 +14,6 @@ namespace olx_be_api.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime ExpiredAt { get; set; }
-        public AdPackageType CurrentPackageType { get; set; } = AdPackageType.Standard;
-
         public Category? Category { get; set; }
         public User User { get; set; } = null!;
         public Guid UserId { get; set; }
@@ -23,5 +21,6 @@ namespace olx_be_api.Models
         public Location Location { get; set; } = null!;
         public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
         public ICollection<Favorite> FavoritedBy { get; set; } = new List<Favorite>();
+        public ICollection<ActiveProductFeature> ActiveFeatures { get; set; } = new List<ActiveProductFeature>();
     }
 }

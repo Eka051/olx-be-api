@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using olx_be_api.Data;
 using olx_be_api.Helpers;
 using olx_be_api.Models;
+using olx_be_api.Models.Enums;
 using olx_be_api.Services;
 using System.Text.Json;
 
@@ -61,7 +62,7 @@ namespace olx_be_api.Controllers
                 CustomerEmail = user.Email!,
                 LineItems = new List<DokuLineItem>
                 {
-                    new DokuLineItem { Name = package.Name, Price = package.Price, Quantity = 1 }
+                    new DokuLineItem { Name = package.Description ?? $"Premium {package.DurationDays} Hari", Price = package.Price, Quantity = 1 }
                 }
             };
 
@@ -117,6 +118,7 @@ namespace olx_be_api.Controllers
             {
                 AdPackageId = item.AdPackageId,
                 ProductId = item.ProductId,
+                Price = item.AdPackage.Price,
                 Quantity = item.Quantity
             }).ToList();
 
@@ -149,6 +151,9 @@ namespace olx_be_api.Controllers
             transaction.PaymentUrl = dokuResponse.PaymentUrl;
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
+            _context.CartItems.RemoveRange(cartItems);
+            await _context.SaveChangesAsync();
+
 
             return Ok(new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
         }
@@ -193,32 +198,66 @@ namespace olx_be_api.Controllers
                         var purchasedItems = JsonSerializer.Deserialize<List<TransactionItemDetail>>(transaction.Details);
                         if (purchasedItems != null)
                         {
-                            var productIds = purchasedItems.Select(p => p.ProductId).Distinct().ToList();
-                            var productsToUpdate = await _context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
                             var adPackageIds = purchasedItems.Select(p => p.AdPackageId).Distinct().ToList();
-                            var adPackages = await _context.AdPackages.Where(ap => adPackageIds.Contains(ap.Id)).ToDictionaryAsync(ap => ap.Id);
+                            var adPackages = await _context.AdPackages
+                                .Include(ap => ap.Features)
+                                .Where(ap => adPackageIds.Contains(ap.Id))
+                                .ToDictionaryAsync(ap => ap.Id);
+
+                            var allProductIds = purchasedItems.Select(item => item.ProductId).ToList();
+                            var activeFeaturesForProducts = await _context.ActiveProductFeatures
+                                .Where(af => allProductIds.Contains(af.ProductId))
+                                .ToListAsync();
+
+                            var newFeaturesToAdd = new List<ActiveProductFeature>();
 
                             foreach (var item in purchasedItems)
                             {
-                                var product = productsToUpdate.FirstOrDefault(p => p.Id == item.ProductId);
-                                if (product != null && adPackages.TryGetValue(item.AdPackageId, out var adPackage))
+                                if (adPackages.TryGetValue(item.AdPackageId, out var adPackage))
                                 {
-                                    product.CurrentPackageType = adPackage.Type;
-                                    var newExpiry = (product.ExpiredAt > DateTime.UtcNow)
-                                        ? product.ExpiredAt.AddDays(adPackage.DurationDays * item.Quantity)
-                                        : DateTime.UtcNow.AddDays(adPackage.DurationDays * item.Quantity);
-                                    product.ExpiredAt = newExpiry;
+                                    foreach (var feature in adPackage.Features)
+                                    {
+                                        var existingFeature = activeFeaturesForProducts.FirstOrDefault(af =>
+                                            af.ProductId == item.ProductId && af.FeatureType == feature.FeatureType);
+
+                                        if (existingFeature != null)
+                                        {
+                                            if (existingFeature.ExpiryDate.HasValue)
+                                            {
+                                                existingFeature.ExpiryDate = existingFeature.ExpiryDate > DateTime.UtcNow
+                                                    ? existingFeature.ExpiryDate.Value.AddDays(feature.DurationDays)
+                                                    : DateTime.UtcNow.AddDays(feature.DurationDays);
+                                            }
+                                            if (feature.FeatureType == AdFeatureType.Sundul)
+                                            {
+                                                existingFeature.RemainingQuantity += feature.Quantity;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            var newActiveFeature = new ActiveProductFeature
+                                            {
+                                                ProductId = item.ProductId,
+                                                FeatureType = feature.FeatureType
+                                            };
+
+                                            if (feature.FeatureType == AdFeatureType.Highlight || feature.FeatureType == AdFeatureType.Spotlight)
+                                            {
+                                                newActiveFeature.ExpiryDate = DateTime.UtcNow.AddDays(feature.DurationDays);
+                                            }
+                                            else if (feature.FeatureType == AdFeatureType.Sundul)
+                                            {
+                                                newActiveFeature.RemainingQuantity = feature.Quantity;
+                                            }
+                                            newFeaturesToAdd.Add(newActiveFeature);
+                                        }
+                                    }
                                 }
                             }
-                            _context.Products.UpdateRange(productsToUpdate);
 
-                            var cartItemsToRemove = await _context.CartItems
-                                .Where(ci => ci.UserId == transaction.UserId)
-                                .ToListAsync();
-
-                            if (cartItemsToRemove.Any())
+                            if (newFeaturesToAdd.Any())
                             {
-                                _context.CartItems.RemoveRange(cartItemsToRemove);
+                                await _context.ActiveProductFeatures.AddRangeAsync(newFeaturesToAdd);
                             }
                         }
                     }
