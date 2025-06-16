@@ -20,7 +20,6 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles="Admin")]
         [ProducesResponseType(typeof(ApiResponse<List<CategoryResponseDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
