@@ -25,7 +25,7 @@ namespace olx_be_api.Controllers
 
         [HttpPost("premium-subscriptions/{id}/checkout")]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -76,12 +76,13 @@ namespace olx_be_api.Controllers
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
-            return Ok(new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
+            return CreatedAtAction(nameof(GetPaymentByInvoice), new { invoiceNumber = transaction.InvoiceNumber },
+                new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
         }
 
         [HttpPost("cart/checkout")]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -154,11 +155,13 @@ namespace olx_be_api.Controllers
             _context.CartItems.RemoveRange(cartItems);
             await _context.SaveChangesAsync();
 
-
-            return Ok(new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
+            return CreatedAtAction(nameof(GetPaymentByInvoice), new { invoiceNumber = transaction.InvoiceNumber },
+                new ApiResponse<string> { success = true, message = "URL pembayaran berhasil dibuat", data = dokuResponse.PaymentUrl });
         }
 
         [HttpPost("webhooks/doku")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DokuNotification()
         {
             using var reader = new StreamReader(Request.Body);
@@ -272,6 +275,35 @@ namespace olx_be_api.Controllers
             }
 
             return Ok();
+        }
+
+        [HttpGet("{invoiceNumber}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<Transaction>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetPaymentByInvoice(string invoiceNumber)
+        {
+            var userId = User.GetUserId();
+            var transaction = await _context.Transactions
+                .FirstOrDefaultAsync(t => t.InvoiceNumber == invoiceNumber && t.UserId == userId);
+
+            if (transaction == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Transaksi tidak ditemukan"
+                });
+            }
+
+            return Ok(new ApiResponse<Transaction>
+            {
+                success = true,
+                message = "Transaksi berhasil ditemukan",
+                data = transaction
+            });
         }
     }
 }

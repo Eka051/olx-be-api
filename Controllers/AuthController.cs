@@ -24,16 +24,21 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost("firebase")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequest request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Permintaan tidak valid",
+                    errors = ModelState
+                });
             }
 
             try
@@ -45,7 +50,12 @@ namespace olx_be_api.Controllers
                 }
                 catch (FirebaseAuthException ex)
                 {
-                    return Unauthorized(new { success = false, message = "Token Firebase tidak valid", error = ex.Message });
+                    return Unauthorized(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Token Firebase tidak valid",
+                        errors = new { firebase = ex.Message }
+                    });
                 }
 
                 var uid = decodedToken.Uid;
@@ -56,7 +66,12 @@ namespace olx_be_api.Controllers
                 }
                 catch (FirebaseAuthException ex)
                 {
-                    return NotFound(new { success = false, message = "Pengguna tidak ditemukan di Firebase", error = ex.Message });
+                    return NotFound(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Pengguna tidak ditemukan di Firebase",
+                        errors = new { firebase = ex.Message }
+                    });
                 }
 
                 string authProvider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId ?? "unknown";
@@ -113,7 +128,7 @@ namespace olx_be_api.Controllers
                 }
 
                 var token = _jwtHelper.GenerateJwtToken(user);
-                return Ok(new LoginResponseDTO
+                var loginResponse = new LoginResponseDTO
                 {
                     Success = true,
                     Message = "Login Berhasil",
@@ -127,24 +142,42 @@ namespace olx_be_api.Controllers
                         AuthProvider = user.AuthProvider,
                         CreatedAt = user.CreatedAt
                     }
-                });
+                };
 
+                return Ok(new ApiResponse<LoginResponseDTO>
+                {
+                    success = true,
+                    message = "Login berhasil",
+                    data = loginResponse
+                });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = "Firebase login failed", error = ex.InnerException?.Message ?? ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Terjadi kesalahan internal server",
+                        errors = new { error = ex.Message }
+                    });
             }
         }
 
-        [HttpPost("email-otps")]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPost("email/otp")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status429TooManyRequests)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> SendEmailOTP([FromBody] EmailOtpRequest request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Permintaan tidak valid",
+                    errors = ModelState
+                });
             }
 
             var recentOtp = await _context.EmailOtps
@@ -153,7 +186,12 @@ namespace olx_be_api.Controllers
 
             if (recentOtp != null)
             {
-                return BadRequest(new { success = false, message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi." });
+                return StatusCode(StatusCodes.Status429TooManyRequests,
+                    new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi."
+                    });
             }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
@@ -210,33 +248,53 @@ namespace olx_be_api.Controllers
                 </html>";
                 await _emailHelper.SendEmailAsync(request.Email, emailSubject, emailMessage);
 
-                return StatusCode(StatusCodes.Status201Created, new { success = true, message = "Kode OTP telah dikirim ke email Anda" });
+                return Created("", new ApiResponse<string>
+                {
+                    success = true,
+                    message = "Kode OTP telah dikirim ke email Anda"
+                });
             }
             catch (Exception ex)
             {
                 _context.EmailOtps.Remove(emailOtp);
                 await _context.SaveChangesAsync();
-                return BadRequest(new { success = false, message = "Gagal mengirim email OTP", error = ex.InnerException?.Message ?? ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Gagal mengirim email OTP",
+                        errors = new { email = ex.Message }
+                    });
             }
         }
 
-        [HttpPost("email-verifications")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPost("email/verify")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status410Gone)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> VerifyEmailOtp([FromBody] EmailOtpVerify request)
         {
             try
             {
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Otp))
                 {
-                    return BadRequest(new { success = false, message = "Email dan OTP harus diisi" });
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Email dan OTP harus diisi"
+                    });
                 }
 
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage });
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Permintaan tidak valid",
+                        errors = ModelState
+                    });
                 }
 
                 var user = await _context.Users
@@ -246,13 +304,32 @@ namespace olx_be_api.Controllers
 
                 if (user == null)
                 {
-                    return NotFound(new { success = false, message = "Pengguna tidak ditemukan" });
+                    return NotFound(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Pengguna tidak ditemukan"
+                    });
                 }
 
                 var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
                 if (emailOtp == null)
                 {
-                    return BadRequest(new { success = false, message = "Kode OTP tidak valid atau telah kedaluwarsa" });
+                    var expiredOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp);
+                    if (expiredOtp != null && expiredOtp.ExpiredAt <= DateTime.UtcNow)
+                    {
+                        return StatusCode(StatusCodes.Status410Gone,
+                            new ApiErrorResponse
+                            {
+                                success = false,
+                                message = "Kode OTP telah kedaluwarsa"
+                            });
+                    }
+
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Kode OTP tidak valid"
+                    });
                 }
 
                 emailOtp.IsUsed = true;
@@ -260,16 +337,29 @@ namespace olx_be_api.Controllers
                 await _context.SaveChangesAsync();
 
                 var token = _jwtHelper.GenerateJwtToken(user);
-                return Ok(new LoginResponseDTO
+                var loginResponse = new LoginResponseDTO
                 {
                     Success = true,
                     Message = "OTP berhasil diverifikasi",
                     Token = token,
+                };
+
+                return Ok(new ApiResponse<LoginResponseDTO>
+                {
+                    success = true,
+                    message = "OTP berhasil diverifikasi",
+                    data = loginResponse
                 });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = "Permintaan tidak valid", error = ex.InnerException?.Message ?? ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Terjadi kesalahan internal server",
+                        errors = new { error = ex.Message }
+                    });
             }
         }
     }

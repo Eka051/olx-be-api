@@ -99,9 +99,10 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateAdPackage([FromBody] CreateAdPackageDTO createAdPackageDto)
+        public async Task<IActionResult> CreateAdPackage([FromBody] CreateAdPackageDTO createAdPackageDto)
         {
             if (!ModelState.IsValid)
             {
@@ -112,7 +113,9 @@ namespace olx_be_api.Controllers
                     errors = ModelState
                 });
             }
-            var existingPackage = _context.AdPackages.FirstOrDefault(ap => ap.Name.ToLower() == createAdPackageDto.Name.ToLower());
+
+            var existingPackage = await _context.AdPackages
+                .FirstOrDefaultAsync(ap => ap.Name.ToLower() == createAdPackageDto.Name.ToLower());
             if (existingPackage != null)
             {
                 return Conflict(new ApiErrorResponse
@@ -121,22 +124,22 @@ namespace olx_be_api.Controllers
                     message = "Nama paket iklan sudah ada"
                 });
             }
-            
+
             var adPackage = new AdPackage
             {
                 Name = createAdPackageDto.Name,
                 Price = createAdPackageDto.Price,
-                Features = createAdPackageDto.Features.Select(f => new AdPackageFeature
+                Features = createAdPackageDto.Features?.Select(f => new AdPackageFeature
                 {
                     FeatureType = f.FeatureType,
                     Quantity = f.Quantity,
                     DurationDays = f.DurationDays
-                }).ToList()
+                }).ToList() ?? new List<AdPackageFeature>()
             };
-            
+
             _context.AdPackages.Add(adPackage);
-            _context.SaveChanges();
-            
+            await _context.SaveChangesAsync();
+
             var response = new AdPackageDTO
             {
                 Id = adPackage.Id,
@@ -149,11 +152,11 @@ namespace olx_be_api.Controllers
                     DurationDays = f.DurationDays,
                 }).ToList()
             };
-            
+
             return CreatedAtAction(nameof(GetAdPackageById), new { id = adPackage.Id }, new ApiResponse<AdPackageDTO>
             {
                 success = true,
-                message = "Berhasil menambahkan iklan",
+                message = "Berhasil menambahkan paket iklan",
                 data = response
             });
         }
