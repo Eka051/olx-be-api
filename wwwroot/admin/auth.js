@@ -131,9 +131,9 @@ function setupOtpInputs() {
 
 function checkAuth() {
     const token = localStorage.getItem('admin_jwt_token');
-    if (!token && !window.location.pathname.endsWith('login.html')) {
-        window.location.href = './login.html';
-    } else if (token && window.location.pathname.endsWith('login.html')) {
+    if (!token && !window.location.pathname.endsWith('index.html')) {
+        window.location.href = './index.html';
+    } else if (token && window.location.pathname.endsWith('index.html')) {
         window.location.href = './dashboard.html';
     }
 }
@@ -141,7 +141,7 @@ function checkAuth() {
 function logout() {
     localStorage.removeItem('admin_jwt_token');
     localStorage.removeItem('admin_user');
-    window.location.href = './login.html';
+    window.location.href = './index.html';
 }
 
 async function fetchWithAuth(endpoint, options = {}) {
