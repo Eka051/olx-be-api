@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using olx_be_api.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
