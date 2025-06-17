@@ -82,6 +82,12 @@ namespace olx_be_api.Controllers
 
                 if (user == null)
                 {
+                    var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+                    if (userRole == null)
+                    {
+                        return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse { message = "Konfigurasi sistem tidak lengkap: Role 'User' tidak ditemukan." });
+                    }
+
                     user = new User
                     {
                         Id = Guid.NewGuid(),
@@ -93,32 +99,17 @@ namespace olx_be_api.Controllers
                         ProviderUid = uid,
                         CreatedAt = DateTime.UtcNow
                     };
-                    _context.Add(user);
+                    _context.Users.Add(user);
+                    _context.UserRoles.Add(new UserRole { User = user, Role = userRole });
                     await _context.SaveChangesAsync();
                 }
                 else
                 {
                     bool needsUpdate = false;
-                    if (user.Name != firebaseUser.DisplayName)
-                    {
-                        user.Name = firebaseUser.DisplayName;
-                        needsUpdate = true;
-                    }
-                    if (user.Email != firebaseUser.Email)
-                    {
-                        user.Email = firebaseUser.Email;
-                        needsUpdate = true;
-                    }
-                    if (user.PhoneNumber != firebaseUser.PhoneNumber)
-                    {
-                        user.PhoneNumber = firebaseUser.PhoneNumber;
-                        needsUpdate = true;
-                    }
-                    if (user.ProfilePictureUrl != firebaseUser.PhotoUrl)
-                    {
-                        user.ProfilePictureUrl = firebaseUser.PhotoUrl;
-                        needsUpdate = true;
-                    }
+                    if (user.Name != firebaseUser.DisplayName) { user.Name = firebaseUser.DisplayName; needsUpdate = true; }
+                    if (user.Email != firebaseUser.Email) { user.Email = firebaseUser.Email; needsUpdate = true; }
+                    if (user.PhoneNumber != firebaseUser.PhoneNumber) { user.PhoneNumber = firebaseUser.PhoneNumber; needsUpdate = true; }
+                    if (user.ProfilePictureUrl != firebaseUser.PhotoUrl) { user.ProfilePictureUrl = firebaseUser.PhotoUrl; needsUpdate = true; }
 
                     if (needsUpdate)
                     {
@@ -172,12 +163,7 @@ namespace olx_be_api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new ApiErrorResponse
-                {
-                    success = false,
-                    message = "Permintaan tidak valid",
-                    errors = ModelState
-                });
+                return BadRequest(new ApiErrorResponse { success = false, message = "Permintaan tidak valid", errors = ModelState });
             }
 
             var recentOtp = await _context.EmailOtps
@@ -187,17 +173,19 @@ namespace olx_be_api.Controllers
             if (recentOtp != null)
             {
                 return StatusCode(StatusCodes.Status429TooManyRequests,
-                    new ApiErrorResponse
-                    {
-                        success = false,
-                        message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi."
-                    });
+                    new ApiErrorResponse { success = false, message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi." });
             }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
 
             if (user == null)
             {
+                var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+                if (userRole == null)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse { message = "Konfigurasi sistem tidak lengkap: Role 'User' tidak ditemukan." });
+                }
+
                 user = new User
                 {
                     Id = Guid.NewGuid(),
@@ -207,8 +195,10 @@ namespace olx_be_api.Controllers
                     ProviderUid = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow
                 };
-                _context.Add(user);
-                await _context.SaveChangesAsync();
+
+                _context.Users.Add(user);
+                _context.UserRoles.Add(new UserRole { User = user, Role = userRole });
+
             }
 
             var existingOTPs = _context.EmailOtps.Where(o => o.UserId == user.Id && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
@@ -280,21 +270,12 @@ namespace olx_be_api.Controllers
             {
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Otp))
                 {
-                    return BadRequest(new ApiErrorResponse
-                    {
-                        success = false,
-                        message = "Email dan OTP harus diisi"
-                    });
+                    return BadRequest(new ApiErrorResponse { success = false, message = "Email dan OTP harus diisi" });
                 }
 
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiErrorResponse
-                    {
-                        success = false,
-                        message = "Permintaan tidak valid",
-                        errors = ModelState
-                    });
+                    return BadRequest(new ApiErrorResponse { success = false, message = "Permintaan tidak valid", errors = ModelState });
                 }
 
                 var user = await _context.Users
@@ -304,11 +285,7 @@ namespace olx_be_api.Controllers
 
                 if (user == null)
                 {
-                    return NotFound(new ApiErrorResponse
-                    {
-                        success = false,
-                        message = "Pengguna tidak ditemukan"
-                    });
+                    return NotFound(new ApiErrorResponse { success = false, message = "Pengguna tidak ditemukan" });
                 }
 
                 var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
@@ -318,18 +295,10 @@ namespace olx_be_api.Controllers
                     if (expiredOtp != null && expiredOtp.ExpiredAt <= DateTime.UtcNow)
                     {
                         return StatusCode(StatusCodes.Status410Gone,
-                            new ApiErrorResponse
-                            {
-                                success = false,
-                                message = "Kode OTP telah kedaluwarsa"
-                            });
+                            new ApiErrorResponse { success = false, message = "Kode OTP telah kedaluwarsa" });
                     }
 
-                    return BadRequest(new ApiErrorResponse
-                    {
-                        success = false,
-                        message = "Kode OTP tidak valid"
-                    });
+                    return BadRequest(new ApiErrorResponse { success = false, message = "Kode OTP tidak valid" });
                 }
 
                 emailOtp.IsUsed = true;
