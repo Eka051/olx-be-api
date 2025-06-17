@@ -163,7 +163,12 @@ namespace olx_be_api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new ApiErrorResponse { success = false, message = "Permintaan tidak valid", errors = ModelState });
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Permintaan tidak valid",
+                    errors = ModelState
+                });
             }
 
             var recentOtp = await _context.EmailOtps
@@ -173,7 +178,12 @@ namespace olx_be_api.Controllers
             if (recentOtp != null)
             {
                 return StatusCode(StatusCodes.Status429TooManyRequests,
-                    new ApiErrorResponse { success = false, message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi." });
+
+                    new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Anda sudah mengirimkan kode OTP dalam 1 menit terakhir. Silakan tunggu sebelum mencoba lagi."
+                    });
             }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.AuthProvider == "email");
@@ -270,12 +280,21 @@ namespace olx_be_api.Controllers
             {
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Otp))
                 {
-                    return BadRequest(new ApiErrorResponse { success = false, message = "Email dan OTP harus diisi" });
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Email dan OTP harus diisi"
+                    });
                 }
 
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiErrorResponse { success = false, message = "Permintaan tidak valid", errors = ModelState });
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Permintaan tidak valid",
+                        errors = ModelState
+                    });
                 }
 
                 var user = await _context.Users
@@ -285,7 +304,11 @@ namespace olx_be_api.Controllers
 
                 if (user == null)
                 {
-                    return NotFound(new ApiErrorResponse { success = false, message = "Pengguna tidak ditemukan" });
+                    return NotFound(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Pengguna tidak ditemukan"
+                    });
                 }
 
                 var emailOtp = await _context.EmailOtps.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Otp == request.Otp && !o.IsUsed && o.ExpiredAt > DateTime.UtcNow);
@@ -295,10 +318,18 @@ namespace olx_be_api.Controllers
                     if (expiredOtp != null && expiredOtp.ExpiredAt <= DateTime.UtcNow)
                     {
                         return StatusCode(StatusCodes.Status410Gone,
-                            new ApiErrorResponse { success = false, message = "Kode OTP telah kedaluwarsa" });
+                            new ApiErrorResponse
+                            {
+                                success = false,
+                                message = "Kode OTP telah kedaluwarsa"
+                            });
                     }
 
-                    return BadRequest(new ApiErrorResponse { success = false, message = "Kode OTP tidak valid" });
+                    return BadRequest(new ApiErrorResponse
+                    {
+                        success = false,
+                        message = "Kode OTP tidak valid"
+                    });
                 }
 
                 emailOtp.IsUsed = true;
