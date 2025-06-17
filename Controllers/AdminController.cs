@@ -86,7 +86,6 @@ namespace olx_be_api.Controllers
                         PhoneNumber = u.PhoneNumber,
                         ProfilePictureUrl = u.ProfilePictureUrl,
                         CreatedAt = u.CreatedAt,
-                        // PERBAIKAN: Menggunakan properti navigasi `Products.Count()` yang dapat diterjemahkan oleh EF Core.
                         TotalAds = u.Products.Count()
                     })
                     .ToListAsync();
