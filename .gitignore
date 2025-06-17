@@ -16,6 +16,7 @@
 # firebase-adminSDK
 firebase-adminsdk.json
 appsettings.json
+appsettings.local.json
 
 # Mono auto generated files
 mono_crash.*
@@ -367,4 +368,6 @@ MigrationBackup/
 FodyWeavers.xsd
 /appsettings.json
 /appsettings.json
+/appsettings.json
+/appsettings.local.json
 /appsettings.json
