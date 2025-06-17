@@ -35,7 +35,7 @@ async function handleRequestOtp(e) {
     spinner.classList.remove('hidden');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/email-otp`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/email/otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
@@ -73,7 +73,7 @@ async function handleVerifyOtp(e) {
     spinner.classList.remove('hidden');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/email-verify`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/email/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userEmailForVerification, otp })
