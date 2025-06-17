@@ -269,7 +269,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost("email/verify")]
-        [ProducesResponseType(typeof(ApiResponse<LoginResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status410Gone)]
@@ -337,18 +337,12 @@ namespace olx_be_api.Controllers
                 await _context.SaveChangesAsync();
 
                 var token = _jwtHelper.GenerateJwtToken(user);
-                var loginResponse = new LoginResponseDTO
-                {
-                    Success = true,
-                    Message = "OTP berhasil diverifikasi",
-                    Token = token,
-                };
 
-                return Ok(new ApiResponse<LoginResponseDTO>
+                return Ok(new ApiResponse<object>
                 {
                     success = true,
                     message = "OTP berhasil diverifikasi",
-                    data = loginResponse
+                    data = new { token = token }
                 });
             }
             catch (Exception ex)
