@@ -35,7 +35,7 @@ async function handleRequestOtp(e) {
     spinner.classList.remove('hidden');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/email-otp`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/email/otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
@@ -73,7 +73,7 @@ async function handleVerifyOtp(e) {
     spinner.classList.remove('hidden');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/email-verifications`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/email/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userEmailForVerification, otp })
@@ -82,13 +82,18 @@ async function handleVerifyOtp(e) {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            const tokenPayload = JSON.parse(atob(result.token.split('.')[1]));
+            const token = result.data.token;
+            if (!token) {
+                throw new Error("Token tidak ditemukan di dalam respons server.");
+            }
+
+            const tokenPayload = JSON.parse(atob(token.split('.')[1]));
             const roles = tokenPayload.role;
 
             const isAdmin = Array.isArray(roles) ? roles.includes('Admin') : roles === 'Admin';
 
             if (isAdmin) {
-                localStorage.setItem('admin_jwt_token', result.token);
+                localStorage.setItem('admin_jwt_token', token);
                 const user = { name: tokenPayload.name, email: tokenPayload.email, profilePictureUrl: null };
                 localStorage.setItem('admin_user', JSON.stringify(user));
                 window.location.href = './dashboard.html';
@@ -99,6 +104,7 @@ async function handleVerifyOtp(e) {
             errorMessage.textContent = result.message || 'Kode OTP tidak valid.';
         }
     } catch (error) {
+        console.error('Error during OTP verification:', error);
         errorMessage.textContent = 'Terjadi kesalahan verifikasi.';
     } finally {
         buttonText.classList.remove('hidden');
