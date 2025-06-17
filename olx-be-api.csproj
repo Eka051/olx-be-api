@@ -6,7 +6,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<RootNamespace>olx_be_api</RootNamespace>
 	</PropertyGroup>
-
 	<ItemGroup>
 		<PackageReference Include="FirebaseAdmin" Version="3.2.0" />
 		<PackageReference Include="MailKit" Version="4.12.1" />
