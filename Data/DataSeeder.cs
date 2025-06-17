@@ -9,9 +9,9 @@ namespace olx_be_api.Data
     {
         public static void SeedDatabase(AppDbContext context)
         {
-            context.Database.Migrate(); 
+            context.Database.Migrate();
             SeedRole(context);
-            SeedAdmin(context);      
+            SeedAdmin(context);
         }
 
         private static void SeedRole(AppDbContext context)
@@ -98,4 +98,5 @@ namespace olx_be_api.Data
             }
         }
     }
+}
 }
