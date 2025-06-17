@@ -25,10 +25,17 @@ namespace olx_be_api.Helpers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-            foreach (var role in roles)
+            if (user.UserRoles != null)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                var roles = user.UserRoles
+                                .Where(ur => ur.Role != null && !string.IsNullOrEmpty(ur.Role.Name))
+                                .Select(ur => ur.Role.Name)
+                                .ToList();
+
+                foreach (var role in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
             }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
