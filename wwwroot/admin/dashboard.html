@@ -46,15 +46,14 @@
             letter-spacing: 0.5px;
         }
 
-        /* Modern action buttons */
         .action-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.375rem 0.75rem; /* 6px 12px */
-            font-size: 0.875rem; /* 14px */
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
             font-weight: 500;
-            border-radius: 0.5rem; /* 8px */
+            border-radius: 0.5rem;
             transition: background-color 0.2s;
             border: 1px solid transparent;
         }
@@ -82,7 +81,6 @@
 </head>
 <body class="antialiased">
     <div class="flex h-screen">
-        <!-- Sidebar -->
         <div id="sidebar" class="w-64 bg-gray-900 text-gray-300 flex flex-col flex-shrink-0">
             <div class="h-20 flex items-center px-6 border-b border-gray-700">
                 <a href="#dashboard" class="flex items-center space-x-3" onclick="switchView('dashboard')">
@@ -104,7 +102,6 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="h-20 flex items-center justify-between px-8 bg-white border-b">
                 <h1 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard</h1>
@@ -153,7 +150,6 @@
                             <button onclick="openAdPackageModal()" class="text-white bg-[#3977FE] hover:bg-opacity-90 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Tambah Paket</button>
                         </div>
                         <div class="overflow-x-auto">
-                            <!-- UPDATE: Kolom tabel disesuaikan dengan data API -->
                             <table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">Nama Paket</th><th scope="col" class="px-6 py-3">Harga</th><th scope="col" class="px-6 py-3">Fitur</th><th scope="col" class="px-6 py-3 text-right">Aksi</th></tr></thead><tbody id="ad-packages-table-body"></tbody></table>
                         </div>
                     </div>
@@ -166,7 +162,6 @@
                             <button onclick="openPremiumPackageModal()" class="text-white bg-[#3977FE] hover:bg-opacity-90 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Tambah Paket</button>
                         </div>
                         <div class="overflow-x-auto">
-                            <!-- UPDATE: Kolom tabel disesuaikan dengan data API -->
                             <table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-6 py-3">Deskripsi Paket</th><th scope="col" class="px-6 py-3">Harga</th><th scope="col" class="px-6 py-3">Durasi (Hari)</th><th scope="col" class="px-6 py-3">Status</th><th scope="col" class="px-6 py-3 text-right">Aksi</th></tr></thead><tbody id="premium-packages-table-body"></tbody></table>
                         </div>
                     </div>
@@ -175,7 +170,6 @@
         </div>
     </div>
 
-    <!-- Generic Modal -->
     <div id="main-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black bg-opacity-50">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <h3 id="modal-title" class="text-xl font-semibold mb-6">Judul Modal</h3>
@@ -197,12 +191,12 @@
             const adminUser = JSON.parse(localStorage.getItem('admin_user'));
             if (adminUser) {
                 userProfile.innerHTML = `
-                        <div class="text-right">
-                             <h4 class="font-semibold text-gray-800">${adminUser.name || 'Admin'}</h4>
-                             <p class="text-xs text-gray-500">${adminUser.email || 'admin@example.com'}</p>
-                        </div>
-                        <img src="${adminUser.profilePictureUrl || 'https://ui-avatars.com/api/?name=' + (adminUser.name || 'A').charAt(0) + '&background=3977FE&color=fff'}" class="w-12 h-12 rounded-full" alt="Admin">
-                    `;
+                            <div class="text-right">
+                                 <h4 class="font-semibold text-gray-800">${adminUser.name || 'Admin'}</h4>
+                                 <p class="text-xs text-gray-500">${adminUser.email || 'admin@example.com'}</p>
+                            </div>
+                            <img src="${adminUser.profilePictureUrl || 'https://ui-avatars.com/api/?name=' + (adminUser.name || 'A').charAt(0) + '&background=3977FE&color=fff'}" class="w-12 h-12 rounded-full" alt="Admin">
+                        `;
             }
             document.getElementById('logout-button').addEventListener('click', confirmLogout);
 
@@ -261,7 +255,7 @@
         // --- DASHBOARD ---
         async function loadDashboardData() {
             try {
-                const response = await fetchWithAuth('/api/admin/stats');
+                const response = await fetchWithAuth('/api/admin/dashboard/stats');
                 if (response.success) {
                     const stats = response.data;
                     document.getElementById('total-users').textContent = stats.totalUsers.toLocaleString('id-ID');
@@ -274,7 +268,7 @@
             }
 
             try {
-                const chartResponse = await fetchWithAuth('/api/admin/growth-chart');
+                const chartResponse = await fetchWithAuth('/api/admin/dashboard/growth-chart');
                 if (chartResponse.success) {
                     renderGrowthChart(chartResponse.data);
                 }
@@ -291,13 +285,13 @@
                 const response = await fetchWithAuth('/api/admin/users');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(user => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-medium text-gray-900">${user.name || '-'}</td>
-                                <td class="px-6 py-4">${user.email || '-'}</td>
-                                <td class="px-6 py-4">${user.totalAds}</td>
-                                <td class="px-6 py-4">${new Date(user.createdAt).toLocaleDateString('id-ID')}</td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${user.name || '-'}</td>
+                                    <td class="px-6 py-4">${user.email || '-'}</td>
+                                    <td class="px-6 py-4">${user.totalAds}</td>
+                                    <td class="px-6 py-4">${new Date(user.createdAt).toLocaleDateString('id-ID')}</td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-gray-500">Tidak ada data pengguna.</td></tr>`;
                 }
@@ -314,15 +308,15 @@
                 const response = await fetchWithAuth('/api/categories');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(cat => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-medium text-gray-900">${cat.id}</td>
-                                <td class="px-6 py-4">${cat.name}</td>
-                                <td class="px-6 py-4 text-right space-x-2">
-                                    <button onclick="openCategoryModal(${cat.id}, '${cat.name}')" class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
-                                    <button onclick="deleteCategory(${cat.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
-                                </td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${cat.id}</td>
+                                    <td class="px-6 py-4">${cat.name}</td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <button onclick="openCategoryModal(${cat.id}, '${cat.name}')" class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
+                                        <button onclick="deleteCategory(${cat.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">Belum ada kategori.</td></tr>`;
                 }
@@ -335,8 +329,8 @@
             const modal = document.getElementById('main-modal');
             modal.querySelector('#modal-title').textContent = id ? 'Ubah Kategori' : 'Tambah Kategori Baru';
             modal.querySelector('#modal-body').innerHTML = `
-                    <label for="modal-input-name" class="block mb-2 text-sm font-medium text-gray-900">Nama Kategori</label>
-                    <input type="text" id="modal-input-name" value="${name}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>`;
+                        <label for="modal-input-name" class="block mb-2 text-sm font-medium text-gray-900">Nama Kategori</label>
+                        <input type="text" id="modal-input-name" value="${name}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>`;
 
             modal.querySelector('#modal-save-btn').onclick = () => saveCategory(id);
             modal.classList.remove('hidden');
@@ -396,19 +390,18 @@
                 const response = await fetchWithAuth('/api/adPackage');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(pkg => {
-                        // UPDATE: Membuat ringkasan fitur dari array 'features'
                         const featuresString = pkg.features.map(f => `${f.featureType} (${f.quantity}x, ${f.durationDays} hari)`).join('<br>');
                         return `
-                                <tr class="bg-white border-b hover:bg-gray-50">
-                                    <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
-                                    <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
-                                    <td class="px-6 py-4">${featuresString || 'Tidak ada'}</td>
-                                    <td class="px-6 py-4 text-right space-x-2">
-                                        <button onclick='openAdPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
-                                        <button onclick="deleteAdPackage(${pkg.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
-                                    </td>
-                                </tr>
-                            `;
+                                    <tr class="bg-white border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-gray-900">${pkg.name}</td>
+                                        <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
+                                        <td class="px-6 py-4">${featuresString || 'Tidak ada'}</td>
+                                        <td class="px-6 py-4 text-right space-x-2">
+                                            <button onclick='openAdPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
+                                            <button onclick="deleteAdPackage(${pkg.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
+                                        </td>
+                                    </tr>
+                                `;
                     }).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-gray-500">Belum ada paket iklan.</td></tr>`;
@@ -419,40 +412,37 @@
         }
 
         function openAdPackageModal(id = null, pkg = {}) {
-            // UPDATE: Modal untuk AdPackage disederhanakan karena API update hanya mendukung nama dan harga.
-            // Fitur ditampilkan sebagai read-only.
             const modal = document.getElementById('main-modal');
             const formattedPrice = pkg.price ? 'Rp ' + pkg.price.toLocaleString('id-ID') : '';
             const featuresHtml = pkg.features && pkg.features.length > 0
                 ? `<div class="mt-4">
-                           <p class="text-sm font-medium text-gray-600">Fitur Termasuk:</p>
-                           <ul class="list-disc list-inside text-sm text-gray-500 mt-1">
-                               ${pkg.features.map(f => `<li>${f.featureType}: ${f.quantity}x, berlaku ${f.durationDays} hari</li>`).join('')}
-                           </ul>
-                       </div>`
+                               <p class="text-sm font-medium text-gray-600">Fitur Termasuk:</p>
+                               <ul class="list-disc list-inside text-sm text-gray-500 mt-1">
+                                   ${pkg.features.map(f => `<li>${f.featureType}: ${f.quantity}x, berlaku ${f.durationDays} hari</li>`).join('')}
+                               </ul>
+                           </div>`
                 : '<p class="text-sm text-gray-500 mt-2">Paket ini belum memiliki fitur.</p>';
 
             modal.querySelector('#modal-title').textContent = id ? 'Ubah Paket Iklan' : 'Tambah Paket Iklan Baru';
             // Note: Untuk "Tambah", idealnya ada form untuk menambah fitur, namun untuk "Ubah" kita batasi sesuai kemampuan API.
             modal.querySelector('#modal-body').innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label for="modal-ad-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
-                            <input type="text" id="modal-ad-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-ad-price" class="block mb-2 text-sm font-medium">Harga</label>
-                            <input type="text" id="modal-ad-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        ${id ? featuresHtml : '<!-- Form untuk menambah fitur bisa ditambahkan di sini untuk mode Create -->'}
-                    </div>`;
+                        <div class="space-y-4">
+                            <div>
+                                <label for="modal-ad-name" class="block mb-2 text-sm font-medium">Nama Paket</label>
+                                <input type="text" id="modal-ad-name" value="${pkg.name || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-ad-price" class="block mb-2 text-sm font-medium">Harga</label>
+                                <input type="text" id="modal-ad-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            ${id ? featuresHtml : ''}
+                        </div>`;
             modal.querySelector('#modal-save-btn').onclick = () => saveAdPackage(id, pkg.features);
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
 
         async function saveAdPackage(id) {
-            // UPDATE: Disesuaikan untuk hanya mengirim nama dan harga saat update.
             const name = document.getElementById('modal-ad-name').value;
             const price = getRawPrice('modal-ad-price');
 
@@ -461,12 +451,9 @@
                 return;
             }
 
-            // NOTE: API 'PUT /api/adPackage/{id}' hanya menangani 'name' dan 'price'. Fitur tidak bisa diubah via endpoint ini.
-            // Untuk 'POST', body harus lebih kompleks dan menyertakan fitur.
             const method = id ? 'PUT' : 'POST';
             const endpoint = id ? `/api/adPackage/${id}` : '/api/adPackage';
 
-            // Untuk PUT, DTO-nya adalah UpdateAdPackageDTO yang hanya berisi Name dan Price.
             const body = JSON.stringify({ name, price });
 
             try {
@@ -507,18 +494,17 @@
                 const response = await fetchWithAuth('/api/premium-packages');
                 if (response.success && response.data.length > 0) {
                     tableBody.innerHTML = response.data.map(pkg => `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <!-- UPDATE: Menggunakan 'pkg.description' karena 'pkg.name' tidak ada di API response -->
-                                <td class="px-6 py-4 font-medium text-gray-900">${pkg.description || '-'}</td>
-                                <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
-                                <td class="px-6 py-4">${pkg.durationDays}</td>
-                                <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pkg.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${pkg.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
-                                <td class="px-6 py-4 text-right space-x-2">
-                                    <button onclick='openPremiumPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
-                                    <button onclick="deletePremiumPackage(${pkg.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
-                                </td>
-                            </tr>
-                        `).join('');
+                                <tr class="bg-white border-b hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium text-gray-900">${pkg.description || '-'}</td>
+                                    <td class="px-6 py-4">Rp ${pkg.price.toLocaleString('id-ID')}</td>
+                                    <td class="px-6 py-4">${pkg.durationDays}</td>
+                                    <td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${pkg.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${pkg.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <button onclick='openPremiumPackageModal(${pkg.id}, ${JSON.stringify(pkg)})' class="action-btn action-btn-edit"><i class="fas fa-pencil-alt fa-sm mr-2"></i>Ubah</button>
+                                        <button onclick="deletePremiumPackage(${pkg.id})" class="action-btn action-btn-delete"><i class="fas fa-trash-alt fa-sm mr-2"></i>Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('');
                 } else {
                     tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-500">Belum ada paket premium.</td></tr>`;
                 }
@@ -531,29 +517,28 @@
             const modal = document.getElementById('main-modal');
             const formattedPrice = pkg.price ? 'Rp ' + pkg.price.toLocaleString('id-ID') : '';
             modal.querySelector('#modal-title').textContent = id ? 'Ubah Paket Premium' : 'Tambah Paket Premium Baru';
-            // UPDATE: Mengganti 'Nama Paket' dengan 'Deskripsi' dan id input
             modal.querySelector('#modal-body').innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label for="modal-premium-description" class="block mb-2 text-sm font-medium">Deskripsi Paket</label>
-                            <input type="text" id="modal-premium-description" value="${pkg.description || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-premium-price" class="block mb-2 text-sm font-medium">Harga</label>
-                            <input type="text" id="modal-premium-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                        <div>
-                            <label for="modal-premium-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
-                            <input type="number" id="modal-premium-duration" value="${pkg.durationDays || 0}" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
-                        </div>
-                         <div>
-                             <label class="relative inline-flex items-center cursor-pointer">
-                               <input type="checkbox" id="modal-premium-active" class="sr-only peer" ${pkg.isActive === undefined || pkg.isActive ? 'checked' : ''}>
-                               <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                               <span class="ml-3 text-sm font-medium text-gray-900">Aktif</span>
-                             </label>
-                        </div>
-                    </div>`;
+                        <div class="space-y-4">
+                            <div>
+                                <label for="modal-premium-description" class="block mb-2 text-sm font-medium">Deskripsi Paket</label>
+                                <input type="text" id="modal-premium-description" value="${pkg.description || ''}" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-premium-price" class="block mb-2 text-sm font-medium">Harga</label>
+                                <input type="text" id="modal-premium-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                            <div>
+                                <label for="modal-premium-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
+                                <input type="number" id="modal-premium-duration" value="${pkg.durationDays || 0}" min="1" class="bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
+                             <div>
+                                 <label class="relative inline-flex items-center cursor-pointer">
+                                   <input type="checkbox" id="modal-premium-active" class="sr-only peer" ${pkg.isActive === undefined || pkg.isActive ? 'checked' : ''}>
+                                   <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                   <span class="ml-3 text-sm font-medium text-gray-900">Aktif</span>
+                                 </label>
+                            </div>
+                        </div>`;
 
             modal.querySelector('#modal-save-btn').onclick = () => savePremiumPackage(id);
             modal.classList.remove('hidden');
@@ -574,7 +559,6 @@
 
             const method = id ? 'PUT' : 'POST';
             const endpoint = id ? `/api/premium-packages/${id}` : '/api/premium-packages';
-            // UPDATE: Mengirim 'description' bukan 'name'
             const body = JSON.stringify({ description, price, durationDays, isActive });
 
             try {
