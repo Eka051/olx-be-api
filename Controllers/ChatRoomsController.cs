@@ -264,5 +264,54 @@ namespace olx_be_api.Controllers
                     }
                 });
         }
+
+        [HttpDelete("{id}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteChatRoom(Guid id)
+        {
+            var userId = User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Unauthorized(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Authentication required"
+                });
+            }
+
+            var chatRoom = await _context.ChatRooms
+                .FirstOrDefaultAsync(c => c.Id == id && (c.BuyerId == userId || c.SellerId == userId));
+
+            if (chatRoom == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Chat room not found or access denied"
+                });
+            }
+
+            try
+            {
+                _context.ChatRooms.Remove(chatRoom);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorResponse
+                {
+                    success = false,
+                    message = "An error occurred while deleting the chat room",
+                    errors = new { exception = ex.Message }
+                });
+            }
+
+            return NoContent();
+        }
     }
 }
