@@ -36,14 +36,12 @@ namespace olx_be_api.Helpers
                 {
                     claims.Add(new Claim(ClaimTypes.Role, role));
                 }
-            }
+            }            var keyString = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured.");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+            
+            key.KeyId = "default-key";
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured.")));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddDays(7),
