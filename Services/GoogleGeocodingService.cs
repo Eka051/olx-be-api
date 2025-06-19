@@ -17,16 +17,17 @@ namespace olx_be_api.Services
         {
             _httpClient = httpClient;
             _apiKey = configuration["GoogleMaps:ApiKey"];
-        }
-
-        public async Task<LocationDetails?> GetLocationDetailsFromCoordinates(double lat, double lng)
+        }        public async Task<LocationDetails?> GetLocationDetailsFromCoordinates(double lat, double lng)
         {
             if (string.IsNullOrEmpty(_apiKey))
             {
                 return null;
             }
 
-            var url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={_apiKey}&language=id";
+            // Use invariant culture to ensure decimal point (not comma) in URL
+            var latStr = lat.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var lngStr = lng.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={latStr},{lngStr}&key={_apiKey}&language=id";
 
             var response = await _httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode)

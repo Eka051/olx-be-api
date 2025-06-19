@@ -267,7 +267,7 @@ namespace olx_be_api.Controllers
 
         [HttpDelete("{id}")]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status403Forbidden)]

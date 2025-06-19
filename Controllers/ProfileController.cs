@@ -24,9 +24,8 @@ namespace olx_be_api.Controllers
         {
             _context = context;
             _storageService = storageService;
-        }
-
-        [HttpGet("me")]
+        }    
+              [HttpGet("me")]
         [ProducesResponseType(typeof(ApiResponse<UserProfileDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]

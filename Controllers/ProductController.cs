@@ -118,11 +118,9 @@ namespace olx_be_api.Controllers
             };
 
             return Ok(new ApiResponse<ProductResponseDTO> { success = true, message = "Product retrieved successfully", data = response });
-        }
-
-        [HttpPost]
+        }        [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<ProductResponseDTO>), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -134,9 +132,11 @@ namespace olx_be_api.Controllers
             }
 
             var userId = User.GetUserId();
-            if (userId == Guid.Empty)
+            var user = await _context.Users.FindAsync(userId);
+            
+            if (user == null)
             {
-                return Unauthorized(new ApiErrorResponse { success = false, message = "Unauthorized" });
+                return Unauthorized(new ApiErrorResponse { success = false, message = "User not found." });
             }
 
             if (productDTO.Images == null || !productDTO.Images.Any())
@@ -144,7 +144,16 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse { message = "Minimal harus ada satu gambar yang diunggah." });
             }
 
-            Guid? locationId = null;
+            var locationDetails = await _geocodingService.GetLocationDetailsFromCoordinates(productDTO.Latitude, productDTO.Longitude);
+
+            var location = new Location
+            {
+                Latitude = productDTO.Latitude,
+                Longitude = productDTO.Longitude,
+                Province = locationDetails?.Province != null ? await _context.Provinces.FirstOrDefaultAsync(p => p.name == locationDetails.Province) : null,
+                City = locationDetails?.City != null ? await _context.Cities.FirstOrDefaultAsync(c => c.Name == locationDetails.City) : null,
+                District = locationDetails?.District != null ? await _context.Districts.FirstOrDefaultAsync(d => d.Name == locationDetails.District) : null
+            };
 
             var newProduct = new Product
             {
@@ -153,24 +162,19 @@ namespace olx_be_api.Controllers
                 Description = productDTO.Description,
                 Price = productDTO.Price,
                 CategoryId = productDTO.CategoryId,
-                LocationId = locationId,
                 UserId = userId,
+                Location = location,
                 CreatedAt = DateTime.UtcNow,
                 ExpiredAt = DateTime.UtcNow.AddDays(30)
             };
 
-            bool isFirst = true;
+            var imageUrls = new List<string>();
             foreach (var imageFile in productDTO.Images)
             {
                 try
                 {
                     var imageUrl = await _storageService.UploadAsync(imageFile, "product-images");
-                    newProduct.ProductImages.Add(new ProductImage
-                    {
-                        ImageUrl = imageUrl,
-                        IsCover = isFirst
-                    });
-                    isFirst = false;
+                    imageUrls.Add(imageUrl);
                 }
                 catch (Exception ex)
                 {
@@ -178,15 +182,20 @@ namespace olx_be_api.Controllers
                 }
             }
 
+            bool isFirst = true;
+            foreach (var url in imageUrls)
+            {
+                newProduct.ProductImages.Add(new ProductImage { ImageUrl = url, IsCover = isFirst });
+                isFirst = false;
+            }
+
             _context.Products.Add(newProduct);
             await _context.SaveChangesAsync();
 
-            var actionResult = await GetProductById(newProduct.Id);
-            if (actionResult is OkObjectResult okResult)
-            {
-                return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, okResult.Value);
-            }
-            return StatusCode(201, new { success = true, message = "Produk berhasil dibuat." });
+            var result = await GetProductById(newProduct.Id);
+            var createdResult = result as OkObjectResult;
+
+            return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, createdResult.Value);
         }
 
         [HttpPut("{id}")]
@@ -303,7 +312,6 @@ namespace olx_be_api.Controllers
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
-            return NoContent();
-        }
+            return NoContent();        }
     }
 }

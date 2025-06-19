@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using olx_be_api.Data;
 using olx_be_api.DTO;
@@ -215,9 +216,7 @@ namespace olx_be_api.Controllers
             if (existingOTPs.Any())
             {
                 _context.EmailOtps.RemoveRange(existingOTPs);
-            }
-
-            var otpCode = new Random().Next(100000, 999999).ToString();
+            }            var otpCode = new Random().Next(100000, 999999).ToString();
             var otpExpiration = DateTime.UtcNow.AddMinutes(10);
 
             var emailOtp = new EmailOtp
@@ -355,6 +354,28 @@ namespace olx_be_api.Controllers
                         errors = new { error = ex.Message }
                     });
             }
+        }
+
+        [HttpGet("test-token")]
+        [Authorize]
+        public async Task<IActionResult> TestToken()
+        {
+            var userId = User.GetUserId();
+            var user = await _context.Users.FindAsync(userId);
+
+            return Ok(new ApiResponse<object>
+            {
+                success = true,
+                message = "Token test successful",
+                data = new
+                {
+                    userId = userId,
+                    userExists = user != null,
+                    claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList(),
+                    userEmail = user?.Email,
+                    userName = user?.Name
+                }
+            });
         }
     }
 }

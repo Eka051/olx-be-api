@@ -47,6 +47,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var keyString = builder.Configuration["Jwt:Key"]!;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+        key.KeyId = "default-key";
+        
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -55,8 +59,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            RoleClaimType = ClaimTypes.Role
+            IssuerSigningKey = key,
+            RoleClaimType = ClaimTypes.Role,
+            ClockSkew = TimeSpan.Zero // Reduce the default clock skew from 5 minutes to 0
+        };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"Authentication failed: {context.Exception}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"OnChallenge error: {context.Error}, description: {context.ErrorDescription}");
+                return Task.CompletedTask;
+            }
         };
     });
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
