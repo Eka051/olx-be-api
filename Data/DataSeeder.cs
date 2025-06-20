@@ -6,12 +6,12 @@ using System.Linq;
 namespace olx_be_api.Data
 {
     public static class DataSeeder
-    {
-        public static void SeedDatabase(AppDbContext context)
+    {        public static void SeedDatabase(AppDbContext context)
         {
             context.Database.Migrate();
             SeedRole(context);
             SeedAdmin(context);
+            // Location data will be created dynamically when products are added
         }
 
         private static void SeedRole(AppDbContext context)
@@ -95,7 +95,6 @@ namespace olx_be_api.Data
                 {
                     Console.WriteLine($"{adminEmail} already has 'Admin' role.");
                 }
-            }
-        }
+            }        }
     }
 }

@@ -137,65 +137,66 @@ namespace olx_be_api.Controllers
             if (user == null)
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "User not found." });
-            }
-
-            if (productDTO.Images == null || !productDTO.Images.Any())
+            }            if (productDTO.Images == null || !productDTO.Images.Any())
             {
                 return BadRequest(new ApiErrorResponse { message = "Minimal harus ada satu gambar yang diunggah." });
             }
 
             var locationDetails = await _geocodingService.GetLocationDetailsFromCoordinates(productDTO.Latitude, productDTO.Longitude);
 
-            var location = new Location
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Latitude = productDTO.Latitude,
-                Longitude = productDTO.Longitude,
-                Province = locationDetails?.Province != null ? await _context.Provinces.FirstOrDefaultAsync(p => p.name == locationDetails.Province) : null,
-                City = locationDetails?.City != null ? await _context.Cities.FirstOrDefaultAsync(c => c.Name == locationDetails.City) : null,
-                District = locationDetails?.District != null ? await _context.Districts.FirstOrDefaultAsync(d => d.Name == locationDetails.District) : null
-            };
+                var location = await GetOrCreateLocationAsync(locationDetails, productDTO.Latitude, productDTO.Longitude);
 
-            var newProduct = new Product
-            {
-                Id = await GenerateProductId(),
-                Title = productDTO.Title,
-                Description = productDTO.Description,
-                Price = productDTO.Price,
-                CategoryId = productDTO.CategoryId,
-                UserId = userId,
-                Location = location,
-                CreatedAt = DateTime.UtcNow,
-                ExpiredAt = DateTime.UtcNow.AddDays(30)
-            };
-
-            var imageUrls = new List<string>();
-            foreach (var imageFile in productDTO.Images)
-            {
-                try
+                var newProduct = new Product
                 {
-                    var imageUrl = await _storageService.UploadAsync(imageFile, "product-images");
-                    imageUrls.Add(imageUrl);
-                }
-                catch (Exception ex)
+                    Id = await GenerateProductId(),
+                    Title = productDTO.Title,
+                    Description = productDTO.Description,
+                    Price = productDTO.Price,
+                    CategoryId = productDTO.CategoryId,
+                    UserId = userId,
+                    Location = location,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiredAt = DateTime.UtcNow.AddDays(30)
+                };
+
+                var imageUrls = new List<string>();
+                foreach (var imageFile in productDTO.Images)
                 {
-                    return StatusCode(500, new ApiErrorResponse { message = $"Gagal mengunggah gambar: {ex.Message}" });
+                    try
+                    {
+                        var imageUrl = await _storageService.UploadAsync(imageFile, "product-images");
+                        imageUrls.Add(imageUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        return StatusCode(500, new ApiErrorResponse { message = $"Gagal mengunggah gambar: {ex.Message}" });
+                    }
                 }
-            }
 
-            bool isFirst = true;
-            foreach (var url in imageUrls)
+                bool isFirst = true;
+                foreach (var url in imageUrls)
+                {                    newProduct.ProductImages.Add(new ProductImage { ImageUrl = url, IsCover = isFirst });
+                    isFirst = false;
+                }
+
+                _context.Products.Add(newProduct);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var result = await GetProductById(newProduct.Id);
+                var createdResult = result as OkObjectResult;
+
+                return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, createdResult.Value);
+            }
+            catch (Exception ex)
             {
-                newProduct.ProductImages.Add(new ProductImage { ImageUrl = url, IsCover = isFirst });
-                isFirst = false;
+                await transaction.RollbackAsync();
+                return StatusCode(500, new ApiErrorResponse { message = $"Error creating product: {ex.Message}" });
             }
-
-            _context.Products.Add(newProduct);
-            await _context.SaveChangesAsync();
-
-            var result = await GetProductById(newProduct.Id);
-            var createdResult = result as OkObjectResult;
-
-            return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, createdResult.Value);
         }
 
         [HttpPut("{id}")]
@@ -301,17 +302,90 @@ namespace olx_be_api.Controllers
             {
                 try
                 {
-                    await _storageService.DeleteAsync(image.ImageUrl, "product-images");
-                }
-                catch (Exception ex)
+                    await _storageService.DeleteAsync(image.ImageUrl, "product-images");                }
+                catch (Exception)
                 {
-                    Console.WriteLine($"Gagal menghapus file {image.ImageUrl}: {ex.Message}");
+                    // Log error but continue with deletion process
+                }
+            }            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private async Task<Location> GetOrCreateLocationAsync(LocationDetails? locationDetails, double latitude, double longitude)
+        {
+            Province? province = null;
+            City? city = null;
+            District? district = null;
+
+            // Get or create Province
+            if (!string.IsNullOrWhiteSpace(locationDetails?.Province))
+            {
+                province = await _context.Provinces.FirstOrDefaultAsync(p => p.name == locationDetails.Province);
+                if (province == null)
+                {
+                    var maxProvinceId = await _context.Provinces.AnyAsync() 
+                        ? await _context.Provinces.MaxAsync(p => p.id) 
+                        : 0;
+                    
+                    province = new Province 
+                    { 
+                        id = maxProvinceId + 1,
+                        name = locationDetails.Province 
+                    };
+                    _context.Provinces.Add(province);
                 }
             }
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            // Get or create City (only if we have a province)
+            if (!string.IsNullOrWhiteSpace(locationDetails?.City) && province != null)
+            {
+                city = await _context.Cities.FirstOrDefaultAsync(c => c.Name == locationDetails.City && c.ProvinceId == province.id);
+                if (city == null)
+                {
+                    var maxCityId = await _context.Cities.AnyAsync() 
+                        ? await _context.Cities.MaxAsync(c => c.Id) 
+                        : 0;
+                    
+                    city = new City
+                    {
+                        Id = maxCityId + 1,
+                        Name = locationDetails.City,
+                        ProvinceId = province.id
+                    };
+                    _context.Cities.Add(city);
+                }
+            }
 
-            return NoContent();        }
+            // Get or create District (only if we have a city)
+            if (!string.IsNullOrWhiteSpace(locationDetails?.District) && city != null)
+            {
+                district = await _context.Districts.FirstOrDefaultAsync(d => d.Name == locationDetails.District && d.CityId == city.Id);
+                if (district == null)
+                {
+                    var maxDistrictId = await _context.Districts.AnyAsync() 
+                        ? await _context.Districts.MaxAsync(d => d.Id) 
+                        : 0;
+                    
+                    district = new District
+                    {
+                        Id = maxDistrictId + 1,
+                        Name = locationDetails.District,
+                        CityId = city.Id
+                    };
+                    _context.Districts.Add(district);
+                }
+            }
+
+            return new Location
+            {
+                Latitude = latitude,
+                Longitude = longitude,
+                Province = province,
+                City = city,
+                District = district
+            };
+        }
     }
 }
