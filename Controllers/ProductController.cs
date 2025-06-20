@@ -47,10 +47,25 @@ namespace olx_be_api.Controllers
         public async Task<IActionResult> GetProducts(
             [FromQuery] string? searchTerm, [FromQuery] int? cityId)
         {
+            var expiredProducts = await _context.Products
+                .Where(p => p.IsActive && p.ExpiredAt < DateTime.UtcNow)
+                .ToListAsync();
+
+            foreach (var product in expiredProducts)
+            {
+                product.IsActive = false;
+            }
+
+            if (expiredProducts.Any())
+            {
+                _context.Products.UpdateRange(expiredProducts);
+                await _context.SaveChangesAsync();
+            }
+
             var query = _context.Products
                 .Include(p => p.ProductImages)
                 .Include(p => p.Location).ThenInclude(l => l.City)
-                .Where(p => !p.IsSold)
+                .Where(p => p.IsActive && !p.IsSold)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -190,7 +205,7 @@ namespace olx_be_api.Controllers
                 var result = await GetProductById(newProduct.Id);
                 var createdResult = result as OkObjectResult;
 
-                return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, createdResult.Value);
+                return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, createdResult!.Value);
             }
             catch (Exception ex)
             {
@@ -300,14 +315,9 @@ namespace olx_be_api.Controllers
 
             foreach (var image in product.ProductImages)
             {
-                try
-                {
-                    await _storageService.DeleteAsync(image.ImageUrl, "product-images");                }
-                catch (Exception)
-                {
-                    // Log error but continue with deletion process
-                }
-            }            _context.Products.Remove(product);
+               await _storageService.DeleteAsync(image.ImageUrl, "product-images");
+            }            
+            _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -319,7 +329,6 @@ namespace olx_be_api.Controllers
             City? city = null;
             District? district = null;
 
-            // Get or create Province
             if (!string.IsNullOrWhiteSpace(locationDetails?.Province))
             {
                 province = await _context.Provinces.FirstOrDefaultAsync(p => p.name == locationDetails.Province);
@@ -338,7 +347,6 @@ namespace olx_be_api.Controllers
                 }
             }
 
-            // Get or create City (only if we have a province)
             if (!string.IsNullOrWhiteSpace(locationDetails?.City) && province != null)
             {
                 city = await _context.Cities.FirstOrDefaultAsync(c => c.Name == locationDetails.City && c.ProvinceId == province.id);
@@ -358,7 +366,6 @@ namespace olx_be_api.Controllers
                 }
             }
 
-            // Get or create District (only if we have a city)
             if (!string.IsNullOrWhiteSpace(locationDetails?.District) && city != null)
             {
                 district = await _context.Districts.FirstOrDefaultAsync(d => d.Name == locationDetails.District && d.CityId == city.Id);
