@@ -20,7 +20,9 @@ namespace olx_be_api.Controllers
         public AdPackageController(AppDbContext context)
         {
             _context = context;
-        }        [HttpGet]
+        }        
+        
+        [HttpGet]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<List<AdPackageDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -54,7 +56,9 @@ namespace olx_be_api.Controllers
                 message = "Berhasil mengambil data paket iklan",
                 data = response
             });
-        }        [HttpGet("{id}")]
+        }        
+        
+        [HttpGet("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -155,7 +159,9 @@ namespace olx_be_api.Controllers
                 message = "Berhasil menambahkan paket iklan",
                 data = response
             });
-        }        [HttpPut("{id}")]
+        }        
+        
+        [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
@@ -236,7 +242,9 @@ namespace olx_be_api.Controllers
                 message = "Berhasil mengubah data paket iklan",
                 data = response
             });
-        }        [HttpPatch("price/{id}")]
+        }        
+        
+        [HttpPatch("price/{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
@@ -286,7 +294,9 @@ namespace olx_be_api.Controllers
                 message = "Berhasil mengubah harga paket iklan",
                 data = response
             });
-        }        [HttpDelete("{id}")]
+        }        
+        
+        [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
