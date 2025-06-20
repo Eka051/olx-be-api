@@ -429,6 +429,10 @@
                                 <label for="modal-ad-price" class="block mb-2 text-sm font-medium">Harga</label>
                                 <input type="text" id="modal-ad-price" value="${formattedPrice}" oninput="formatRupiah(this)" placeholder="Rp 0" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
                             </div>
+                            <div>
+                                <label for="modal-ad-duration" class="block mb-2 text-sm font-medium">Durasi (Hari)</label>
+                                <input type="number" id="modal-ad-duration" value="${pkg.durationDays}" placeholder="Hari" class="price-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2.5" required>
+                            </div>
                             ${id ? featuresHtml : '<!-- Form untuk menambah fitur bisa ditambahkan di sini untuk mode Create -->'}
                         </div>`;
             modal.querySelector('#modal-save-btn').onclick = () => saveAdPackage(id, pkg.features);
@@ -439,8 +443,9 @@
         async function saveAdPackage(id) {
             const name = document.getElementById('modal-ad-name').value;
             const price = getRawPrice('modal-ad-price');
+            const durationDays = document.getElementById('modal-ad-duration').value;
 
-            if (!name || isNaN(price) || price < 0) {
+            if (!name || isNaN(price) || price < 0 || duration < 0) {
                 Swal.fire('Peringatan', 'Harap isi semua kolom dengan benar.', 'warning');
                 return;
             }
@@ -448,7 +453,7 @@
             const method = id ? 'PUT' : 'POST';
             const endpoint = id ? `/api/adPackage/${id}` : '/api/adPackage';
 
-            const body = JSON.stringify({ name, price });
+            const body = JSON.stringify({ name, price, durationDays });
 
             try {
                 const response = await fetchWithAuth(endpoint, { method, body });
