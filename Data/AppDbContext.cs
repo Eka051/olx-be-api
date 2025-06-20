@@ -54,6 +54,7 @@ namespace olx_be_api.Data
             modelBuilder.Entity<Product>(entity =>
             {
                 entity.Property(p => p.Id).ValueGeneratedNever();
+                entity.Property(p => p.IsActive).HasDefaultValue(true);
 
                 entity.HasMany(p => p.ProductImages)
                     .WithOne(pi => pi.Product)
