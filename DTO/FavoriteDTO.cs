@@ -11,6 +11,7 @@ namespace olx_be_api.DTO
     public class FavoriteResponseDTO
     {
         public int Id { get; set; }
+        public Guid UserId { get; set; }
         public long ProductId { get; set; }
         public DateTime CreatedAt { get; set; }
     }

@@ -43,9 +43,9 @@ namespace olx_be_api.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetProducts(
-            [FromQuery] string? searchTerm, [FromQuery] int? cityId)
+        public async Task<IActionResult> GetAllProducts()
         {
             var expiredProducts = await _context.Products
                 .Where(p => p.IsActive && p.ExpiredAt < DateTime.UtcNow)
@@ -58,10 +58,54 @@ namespace olx_be_api.Controllers
 
             if (expiredProducts.Any())
             {
+                foreach (var product in expiredProducts)
+                {
+                    product.IsActive = false;
+                }
                 _context.Products.UpdateRange(expiredProducts);
                 await _context.SaveChangesAsync();
             }
 
+
+            //var products = await query.Select(p => new ProductResponseDTO
+            //{
+            //    Id = p.Id,
+            //    Title = p.Title,
+            //    Description = p.Description!,
+            //    Price = p.Price,
+            //    IsSold = p.IsSold,
+            //    CreatedAt = p.CreatedAt,
+            //    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
+            //    CityId = p.Location.CityId,
+            //    CityName = p.Location.City!.Name,
+            //}).ToListAsync();
+            var products = await _context.Products
+                .Include(p => p.ProductImages)
+                .Include(p => p.Location).ThenInclude(l => l.City)
+                .Where(p => p.IsActive && !p.IsSold)
+                .Select(p => new ProductResponseDTO
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description!,
+                    Price = p.Price,
+                    IsSold = p.IsSold,
+                    CreatedAt = p.CreatedAt,
+                    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
+                    CityId = p.Location.CityId,
+                    CityName = p.Location.City!.Name,
+                }).ToListAsync();
+
+            return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = "Products retrieved successfully", data = products });
+        }
+
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> SearchProducts(
+            [FromQuery] string? searchTerm, [FromQuery] string? cityName)
+        {
             var query = _context.Products
                 .Include(p => p.ProductImages)
                 .Include(p => p.Location).ThenInclude(l => l.City)
@@ -72,9 +116,10 @@ namespace olx_be_api.Controllers
             {
                 query = query.Where(p => p.Title.Contains(searchTerm));
             }
-            if (cityId.HasValue)
+
+            if (!string.IsNullOrWhiteSpace(cityName))
             {
-                query = query.Where(p => p.Location.CityId == cityId.Value);
+                query = query.Where(p => p.Location.City!.Name.Contains(cityName, StringComparison.OrdinalIgnoreCase));
             }
 
             var products = await query.Select(p => new ProductResponseDTO
@@ -90,7 +135,7 @@ namespace olx_be_api.Controllers
                 CityName = p.Location.City!.Name,
             }).ToListAsync();
 
-            return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = "Products retrieved successfully", data = products });
+            return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = $"Hasil pencarian produk {searchTerm} berhasil", data = products });
         }
 
         [HttpGet("{id}")]
@@ -133,7 +178,9 @@ namespace olx_be_api.Controllers
             };
 
             return Ok(new ApiResponse<ProductResponseDTO> { success = true, message = "Product retrieved successfully", data = response });
-        }        [HttpPost]
+        }        
+        
+        [HttpPost]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
