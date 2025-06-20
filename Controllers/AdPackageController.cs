@@ -20,16 +20,14 @@ namespace olx_be_api.Controllers
         public AdPackageController(AppDbContext context)
         {
             _context = context;
-        }
-
-        [HttpGet]
+        }        [HttpGet]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<List<AdPackageDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult GetAllAdPackages()
+        public async Task<IActionResult> GetAllAdPackages()
         {
-            var adPackages = _context.AdPackages.Include(ap => ap.Features).ToList();
+            var adPackages = await _context.AdPackages.Include(ap => ap.Features).ToListAsync();
             var response = adPackages.Select(ap => new AdPackageDTO
             {
                 Id = ap.Id,
@@ -56,16 +54,14 @@ namespace olx_be_api.Controllers
                 message = "Berhasil mengambil data paket iklan",
                 data = response
             });
-        }
-
-        [HttpGet("{id}")]
+        }        [HttpGet("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult GetAdPackageById(int id)
+        public async Task<IActionResult> GetAdPackageById(int id)
         {
-            var adPackage = _context.AdPackages.Include(ap => ap.Features).FirstOrDefault(ap => ap.Id == id);
+            var adPackage = await _context.AdPackages.Include(ap => ap.Features).FirstOrDefaultAsync(ap => ap.Id == id);
             if (adPackage == null)
             {
                 return NotFound(new ApiErrorResponse
@@ -159,16 +155,15 @@ namespace olx_be_api.Controllers
                 message = "Berhasil menambahkan paket iklan",
                 data = response
             });
-        }
-
-        [HttpPut("{id}")]
+        }        [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult UpdateAdPackage(int id, [FromBody] UpdateAdPackageDTO updateAdPackageDto)
+        public async Task<IActionResult> UpdateAdPackage(int id, [FromBody] UpdateAdPackageDTO updateAdPackageDto)
         {
             if (!ModelState.IsValid)
             {
@@ -206,9 +201,7 @@ namespace olx_be_api.Controllers
                     success = false,
                     message = "Data paket iklan tidak ditemukan"
                 });
-            }
-
-            var existingPackage = _context.AdPackages.FirstOrDefault(ap => ap.Name.ToLower() == updateAdPackageDto.Name.ToLower() && ap.Id != id);
+            }            var existingPackage = await _context.AdPackages.FirstOrDefaultAsync(ap => ap.Name.ToLower() == updateAdPackageDto.Name.ToLower() && ap.Id != id);
             if (existingPackage != null)
             {
                 return Conflict(new ApiErrorResponse
@@ -222,7 +215,7 @@ namespace olx_be_api.Controllers
             adPackage.Price = updateAdPackageDto.Price;
             
             _context.AdPackages.Update(adPackage);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             
             var response = new AdPackageDTO
             {
@@ -243,16 +236,14 @@ namespace olx_be_api.Controllers
                 message = "Berhasil mengubah data paket iklan",
                 data = response
             });
-        }
-
-        [HttpPatch("price/{id}")]
+        }        [HttpPatch("price/{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<AdPackageDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult UpdatePrice(int id, [FromBody] UpdatePriceAdPackageDTO updatePrice)
+        public async Task<IActionResult> UpdatePrice(int id, [FromBody] UpdatePriceAdPackageDTO updatePrice)
         {
             if (!ModelState.IsValid)
             {
@@ -262,9 +253,8 @@ namespace olx_be_api.Controllers
                     message = "Data input tidak valid",
                     errors = ModelState
                 });
-            }
-            
-            var adPackage = _context.AdPackages.Include(ap => ap.Features).FirstOrDefault(ap => ap.Id == id);
+            }            
+            var adPackage = await _context.AdPackages.Include(ap => ap.Features).FirstOrDefaultAsync(ap => ap.Id == id);
             if (adPackage == null)
             {
                 return NotFound(new ApiErrorResponse
@@ -273,10 +263,9 @@ namespace olx_be_api.Controllers
                     message = "Data paket iklan tidak ditemukan"
                 });
             }
-            
-            adPackage.Price = updatePrice.Price;
+              adPackage.Price = updatePrice.Price;
             _context.AdPackages.Update(adPackage);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             
             var response = new AdPackageDTO
             {
@@ -297,17 +286,14 @@ namespace olx_be_api.Controllers
                 message = "Berhasil mengubah harga paket iklan",
                 data = response
             });
-        }
-
-        [HttpDelete("{id}")]
+        }        [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public IActionResult DeleteAdPackage(int id)
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]        public async Task<IActionResult> DeleteAdPackage(int id)
         {
-            var adPackage = _context.AdPackages.Include(ap => ap.Features).FirstOrDefault(ap => ap.Id == id);
+            var adPackage = await _context.AdPackages.Include(ap => ap.Features).FirstOrDefaultAsync(ap => ap.Id == id);
             if (adPackage == null)
             {
                 return NotFound(new ApiErrorResponse
@@ -316,9 +302,8 @@ namespace olx_be_api.Controllers
                     message = "Data paket iklan tidak ditemukan"
                 });
             }
-            
-            _context.AdPackages.Remove(adPackage);
-            _context.SaveChanges();
+              _context.AdPackages.Remove(adPackage);
+            await _context.SaveChangesAsync();
             
             return Ok(new ApiResponse<string>
             {
