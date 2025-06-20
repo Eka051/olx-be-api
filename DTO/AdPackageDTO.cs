@@ -26,16 +26,13 @@ namespace olx_be_api.DTO
         [Range(0, int.MaxValue)]
         public int Price { get; set; }
         public List<AdPackageFeatureDTO> Features { get; set; } = new List<AdPackageFeatureDTO>();
-    }
-
-    public class UpdateAdPackageDTO
+    }    public class UpdateAdPackageDTO
     {
         [Required]
         public string Name { get; set; } = null!;
         [Range(0, int.MaxValue)]
         public int Price { get; set; }
-        [Range(1, 366)]
-        public int DurationDays { get; set; }
+        public List<AdPackageFeatureDTO> Features { get; set; } = new List<AdPackageFeatureDTO>();
     }
 
     public class  UpdatePriceAdPackageDTO
