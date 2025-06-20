@@ -1,11 +1,12 @@
 ﻿using olx_be_api.Models;
 using olx_be_api.Models.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace olx_be_api.DTO
-{
-    public class AdPackageFeatureDTO
+{    public class AdPackageFeatureDTO
     {
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public AdFeatureType FeatureType { get; set; }
         public int Quantity { get; set; }
         public int DurationDays { get; set; }
