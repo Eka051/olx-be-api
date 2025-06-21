@@ -45,9 +45,10 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAllProducts()
+        public async Task<IActionResult> GetAllProducts([FromQuery] bool isMyAds = false)
         {
             var userId = User.GetUserId();
+
             var expiredProducts = await _context.Products
                 .Where(p => p.IsActive && p.ExpiredAt < DateTime.UtcNow)
                 .ToListAsync();
@@ -59,31 +60,37 @@ namespace olx_be_api.Controllers
 
             if (expiredProducts.Any())
             {
-                foreach (var product in expiredProducts)
-                {
-                    product.IsActive = false;
-                }
                 _context.Products.UpdateRange(expiredProducts);
                 await _context.SaveChangesAsync();
             }
 
-            var products = await _context.Products
+            var query = _context.Products
                 .Include(p => p.ProductImages)
                 .Include(p => p.Location).ThenInclude(l => l.City)
                 .OrderByDescending(p => p.CreatedAt)
-                .Where(p => p.IsActive && !p.IsSold && p.UserId != userId)
-                .Select(p => new ProductResponseDTO
-                {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Description = p.Description!,
-                    Price = p.Price,
-                    IsSold = p.IsSold,
-                    CreatedAt = p.CreatedAt,
-                    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
-                    CityId = p.Location.CityId,
-                    CityName = p.Location.City!.Name,
-                }).ToListAsync();
+                .Where(p => p.IsActive && !p.IsSold);
+
+            if (isMyAds)
+            {
+                query = query.Where(p => p.UserId == userId);
+            }
+            else
+            {
+                query = query.Where(p => p.UserId != userId);
+            }
+
+            var products = await query.Select(p => new ProductResponseDTO
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description!,
+                Price = p.Price,
+                IsSold = p.IsSold,
+                CreatedAt = p.CreatedAt,
+                Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
+                CityId = p.Location.CityId,
+                CityName = p.Location.City!.Name,
+            }).ToListAsync();
 
             return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = "Products retrieved successfully", data = products });
         }
