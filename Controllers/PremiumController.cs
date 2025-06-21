@@ -11,7 +11,6 @@ namespace olx_be_api.Controllers
 {
     [Route("api/")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
     public class PremiumController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -56,6 +55,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPost("premium-packages")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
@@ -111,6 +111,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPut("premium-packages/{id}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
@@ -174,6 +175,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpDelete("premium-packages/{id}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
