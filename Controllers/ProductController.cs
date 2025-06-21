@@ -66,22 +66,10 @@ namespace olx_be_api.Controllers
                 await _context.SaveChangesAsync();
             }
 
-
-            //var products = await query.Select(p => new ProductResponseDTO
-            //{
-            //    Id = p.Id,
-            //    Title = p.Title,
-            //    Description = p.Description!,
-            //    Price = p.Price,
-            //    IsSold = p.IsSold,
-            //    CreatedAt = p.CreatedAt,
-            //    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
-            //    CityId = p.Location.CityId,
-            //    CityName = p.Location.City!.Name,
-            //}).ToListAsync();
             var products = await _context.Products
                 .Include(p => p.ProductImages)
                 .Include(p => p.Location).ThenInclude(l => l.City)
+                .OrderByDescending(p => p.CreatedAt)
                 .Where(p => p.IsActive && !p.IsSold)
                 .Select(p => new ProductResponseDTO
                 {

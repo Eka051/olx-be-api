@@ -33,6 +33,7 @@ namespace olx_be_api.Controllers
                 .Include(f => f.Product).ThenInclude(p => p.ProductImages)
                 .Include(f => f.Product).ThenInclude(p => p.Location).ThenInclude(l => l.City)
                 .Select(f => f.Product)
+                .OrderByDescending(p => p.CreatedAt)
                 .Select(p => new ProductResponseDTO
                 {
                     Id = p.Id,
