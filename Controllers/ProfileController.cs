@@ -24,8 +24,9 @@ namespace olx_be_api.Controllers
         {
             _context = context;
             _storageService = storageService;
-        }    
-              [HttpGet("me")]
+        }
+
+        [HttpGet("me")]
         [ProducesResponseType(typeof(ApiResponse<UserProfileDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -77,6 +78,36 @@ namespace olx_be_api.Controllers
                 return NotFound(new ApiErrorResponse { success = false, message = "Pengguna tidak ditemukan" });
             }
 
+            bool isUpdated = false;
+
+            if (!string.IsNullOrEmpty(profileDto.Name) && user.Name != profileDto.Name)
+            {
+                user.Name = profileDto.Name;
+                isUpdated = true;
+            }
+
+            if (!string.IsNullOrEmpty(profileDto.PhoneNumber) && user.PhoneNumber != profileDto.PhoneNumber)
+            {
+                var phoneExists = await _context.Users.AnyAsync(u => u.PhoneNumber == profileDto.PhoneNumber && u.Id != userId);
+                if (phoneExists)
+                {
+                    return BadRequest(new ApiErrorResponse { success = false, message = "Nomor telepon sudah digunakan." });
+                }
+                user.PhoneNumber = profileDto.PhoneNumber;
+                isUpdated = true;
+            }
+
+            if (!string.IsNullOrEmpty(profileDto.Email) && user.Email != profileDto.Email)
+            {
+                var emailExists = await _context.Users.AnyAsync(u => u.Email == profileDto.Email && u.Id != userId);
+                if (emailExists)
+                {
+                    return BadRequest(new ApiErrorResponse { success = false, message = "Email sudah digunakan." });
+                }
+                user.Email = profileDto.Email;
+                isUpdated = true;
+            }
+
             if (profileDto.ProfilePicture != null && profileDto.ProfilePicture.Length > 0)
             {
                 if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
@@ -95,6 +126,7 @@ namespace olx_be_api.Controllers
                 {
                     var newProfilePictureUrl = await _storageService.UploadAsync(profileDto.ProfilePicture, "user-avatars");
                     user.ProfilePictureUrl = newProfilePictureUrl;
+                    isUpdated = true;
                 }
                 catch (Exception ex)
                 {
@@ -102,13 +134,14 @@ namespace olx_be_api.Controllers
                 }
             }
 
-            user.Name = profileDto.Name ?? user.Name;
-            user.PhoneNumber = profileDto.PhoneNumber ?? user.PhoneNumber;
+            if (isUpdated)
+            {
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+                return Ok(new ApiResponse<string> { success = true, message = "Profil berhasil diperbarui" });
+            }
 
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(new ApiResponse<string> { success = true, message = "Foto profil berhasil diperbarui" });
+            return Ok(new ApiResponse<string> { success = true, message = "Tidak ada perubahan pada profil" });
         }
     }
 }
