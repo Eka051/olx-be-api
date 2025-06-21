@@ -338,6 +338,29 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<string> { success = true, message = "Product marked as sold." });
         }
 
+        [HttpPatch("{id}/deactivate")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeactivateProduct(long id)
+        {
+            var userId = User.GetUserId();
+            var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+
+            if (product == null)
+            {
+                return NotFound(new ApiErrorResponse { success = false, message = "Product not found or you do not have permission to modify it." });
+            }
+
+            product.IsActive = false;
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+
+            return Ok(new ApiResponse<string> { success = true, message = "Product deactivated successfully." });
+        }
+
         [HttpDelete("{id}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
