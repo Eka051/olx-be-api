@@ -47,6 +47,7 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllProducts()
         {
+            var userId = User.GetUserId();
             var expiredProducts = await _context.Products
                 .Where(p => p.IsActive && p.ExpiredAt < DateTime.UtcNow)
                 .ToListAsync();
@@ -70,7 +71,7 @@ namespace olx_be_api.Controllers
                 .Include(p => p.ProductImages)
                 .Include(p => p.Location).ThenInclude(l => l.City)
                 .OrderByDescending(p => p.CreatedAt)
-                .Where(p => p.IsActive && !p.IsSold)
+                .Where(p => p.IsActive && !p.IsSold && p.UserId != userId)
                 .Select(p => new ProductResponseDTO
                 {
                     Id = p.Id,
