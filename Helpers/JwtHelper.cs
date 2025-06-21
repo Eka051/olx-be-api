@@ -25,18 +25,23 @@ namespace olx_be_api.Helpers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-            foreach (var role in roles)
+            if (user.UserRoles != null)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+                var roles = user.UserRoles
+                                .Where(ur => ur.Role != null && !string.IsNullOrEmpty(ur.Role.Name))
+                                .Select(ur => ur.Role.Name)
+                                .ToList();
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured.")));
+                foreach (var role in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+            }            var keyString = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured.");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+            
+            key.KeyId = "default-key";
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddDays(7),

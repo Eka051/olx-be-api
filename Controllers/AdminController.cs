@@ -86,7 +86,7 @@ namespace olx_be_api.Controllers
                         PhoneNumber = u.PhoneNumber,
                         ProfilePictureUrl = u.ProfilePictureUrl,
                         CreatedAt = u.CreatedAt,
-                        TotalAds = _context.Products.Count(p => p.UserId == u.Id)
+                        TotalAds = u.Products.Count()
                     })
                     .ToListAsync();
 

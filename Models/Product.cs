@@ -12,8 +12,9 @@ namespace olx_be_api.Models
         public int? CategoryId { get; set; }
         public bool IsSold { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime ExpiredAt { get; set; }
+        public bool IsActive { get; set; } = true;
+
         public Category? Category { get; set; }
         public User User { get; set; } = null!;
         public Guid UserId { get; set; }

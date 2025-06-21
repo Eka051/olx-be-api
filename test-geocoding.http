@@ -1,0 +1,32 @@
+@olx_be_api_HostAddress = http://localhost:5087
+
+# Test token (from previous testing)
+@token = eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCIsImtpZCI6IlRlc3RLZXlJZDIwMjUifQ.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjU4ODI1ODE2LTU1YzQtNGY1Ni05MzNjLTI3MTVkZTQ4ODNkMSIsInN1YiI6IjU4ODI1ODE2LTU1YzQtNGY1Ni05MzNjLTI3MTVkZTQ4ODNkMSIsInVpZCI6IjU4ODI1ODE2LTU1YzQtNGY1Ni05MzNjLTI3MTVkZTQ4ODNkMSIsImV4cCI6MTc1MTY1OTQ1NiwiaXNzIjoiT2x4QXBpSXNzdWVyIiwiYXVkIjoiT2x4QXBpQXVkaWVuY2UifQ.WgTEAjQ7dKg9RNqDXbXCWN6rjbVj8tG4YEL6Px9Yl3kh6FwrVkY44q7Ut0cjg9f7OB-CAKV-6Wz8xFkOdkWVqg
+
+###
+
+# Test profile endpoint first (should work)
+GET {{olx_be_api_HostAddress}}/api/profile/user-profile
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+# Test create product with geocoding
+POST {{olx_be_api_HostAddress}}/api/product/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Product with Geocoding",
+  "description": "Testing geocoding functionality",
+  "price": 100000,
+  "categoryId": 1,
+  "latitude": -6.2088,
+  "longitude": 106.8456,
+  "images": [
+    "https://example.com/test.jpg"
+  ]
+}
+
+###
