@@ -44,6 +44,9 @@ namespace olx_be_api.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllProducts([FromQuery] bool isMyAds = false)
         {
@@ -160,6 +163,8 @@ namespace olx_be_api.Controllers
 
         [HttpGet("search")]
         [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> SearchProducts([FromQuery] string? searchTerm, [FromQuery] string? cityName)
         {
@@ -180,7 +185,8 @@ namespace olx_be_api.Controllers
 
             if (!string.IsNullOrWhiteSpace(cityName))
             {
-                query = query.Where(p => p.Location.City != null && p.Location.City.Name.Contains(cityName, StringComparison.OrdinalIgnoreCase));
+                var upperCityName = cityName.ToUpper();
+                query = query.Where(p => p.Location.City != null && p.Location.City.Name.ToUpper().Contains(upperCityName));
             }
 
             var products = await query.Select(p => new ProductResponseDTO
@@ -292,7 +298,7 @@ namespace olx_be_api.Controllers
 
                 if (!string.IsNullOrWhiteSpace(locationDetails?.Province))
                 {
-                    province = await _context.Provinces.FirstOrDefaultAsync(p => p.name.Equals(locationDetails.Province, StringComparison.OrdinalIgnoreCase));
+                    province = await _context.Provinces.FirstOrDefaultAsync(p => p.name.ToUpper() == locationDetails.Province.ToUpper());
                     if (province == null)
                     {
                         province = new Province { name = locationDetails.Province };
