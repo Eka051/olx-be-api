@@ -21,6 +21,8 @@
         public DateTime CreatedAt { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = null!;
+        public string? SellerId { get; set; }
+        public string? SellerName { get; set; }
         public List<string> Images { get; set; } = new List<string>();
 
         public int? ProvinceId { get; set; }

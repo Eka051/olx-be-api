@@ -68,6 +68,7 @@ namespace olx_be_api.Controllers
 
             var query = _context.Products
                 .Include(p => p.ProductImages)
+                .Include(p => p.User)
                 .Include(p => p.Category)
                 .Include(p => p.Location).ThenInclude(l => l.Province)
                 .Include(p => p.Location).ThenInclude(l => l.City)
@@ -94,6 +95,8 @@ namespace olx_be_api.Controllers
                 CreatedAt = p.CreatedAt,
                 CategoryId = p.CategoryId ?? 0,
                 CategoryName = p.Category != null ? p.Category.Name : "N/A",
+                SellerId = p.UserId.ToString(),
+                SellerName = p.User.Name,
                 Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
                 ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
                 ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
@@ -113,6 +116,7 @@ namespace olx_be_api.Controllers
         {
             var query = _context.Products
                 .Include(p => p.ProductImages)
+                .Include(p => p.User)
                 .Include(p => p.Category)
                 .Include(p => p.Location).ThenInclude(l => l.Province)
                 .Include(p => p.Location).ThenInclude(l => l.City)
@@ -140,6 +144,8 @@ namespace olx_be_api.Controllers
                 CreatedAt = p.CreatedAt,
                 CategoryId = p.CategoryId ?? 0,
                 CategoryName = p.Category != null ? p.Category.Name : "N/A",
+                SellerId = p.UserId.ToString(),
+                SellerName = p.User.Name,
                 Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
                 ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
                 ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
@@ -182,6 +188,8 @@ namespace olx_be_api.Controllers
                 CreatedAt = product.CreatedAt,
                 CategoryId = product.CategoryId ?? 0,
                 CategoryName = product.Category != null ? product.Category.Name : "N/A",
+                SellerId = product.UserId.ToString(),
+                SellerName = product.User.Name,
                 Images = product.ProductImages.Select(i => i.ImageUrl).ToList(),
                 ProvinceId = product.Location?.Province?.id,
                 ProvinceName = product.Location?.Province?.name,
@@ -312,6 +320,7 @@ namespace olx_be_api.Controllers
 
                 var createdProduct = await _context.Products
                     .Include(p => p.ProductImages)
+                    .Include(p => p.User)
                     .Include(p => p.Category)
                     .Include(p => p.Location)
                     .ThenInclude(l => l.Province)
@@ -331,6 +340,8 @@ namespace olx_be_api.Controllers
                     CreatedAt = createdProduct.CreatedAt,
                     CategoryId = createdProduct.CategoryId ?? 0,
                     CategoryName = createdProduct.Category?.Name ?? "N/A",
+                    SellerId = createdProduct.UserId.ToString(),
+                    SellerName = createdProduct.User.Name,
                     Images = createdProduct.ProductImages.Select(i => i.ImageUrl).ToList(),
                     ProvinceId = createdProduct.Location?.Province?.id,
                     ProvinceName = createdProduct.Location?.Province?.name,
