@@ -27,6 +27,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpGet("me")]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<UserProfileDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -41,7 +42,7 @@ namespace olx_be_api.Controllers
 
             if (user == null)
             {
-                return NotFound(new ApiErrorResponse { success = false, message = "Pengguna tidak ditemukan" });
+                return Unauthorized(new ApiErrorResponse { success = false, message = "Belum terautentikasi" });
             }
 
             var userProfileDto = new UserProfileDTO
@@ -59,6 +60,7 @@ namespace olx_be_api.Controllers
         }
 
         [HttpPut("me")]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
