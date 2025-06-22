@@ -77,7 +77,7 @@ namespace olx_be_api.Controllers
                 .Include(p => p.Location).ThenInclude(l => l.City)
                 .Include(p => p.Location).ThenInclude(l => l.District)
                 .OrderByDescending(p => p.CreatedAt)
-                .Where(p => p.IsActive && !p.IsSold);
+                .Where(p => !p.IsSold);
 
             if (isMyAds)
             {
@@ -85,7 +85,7 @@ namespace olx_be_api.Controllers
             }
             else
             {
-                query = query.Where(p => p.UserId != userId);
+                query = query.Where(p => p.IsActive && p.UserId != userId);
             }
 
             var products = await query.Select(p => new ProductResponseDTO
