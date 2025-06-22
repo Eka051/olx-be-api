@@ -18,6 +18,7 @@
         public string Description { get; set; } = null!;
         public int Price { get; set; }
         public bool IsSold { get; set; } = false;
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = null!;

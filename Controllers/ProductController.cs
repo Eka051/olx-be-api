@@ -133,6 +133,7 @@ namespace olx_be_api.Controllers
                 .Include(p => p.ProductImages)
                 .Include(p => p.User)
                 .Include(p => p.Category)
+                .Include(p => p.IsActive != false)
                 .Include(p => p.Location).ThenInclude(l => l.Province)
                 .Include(p => p.Location).ThenInclude(l => l.City)
                 .Include(p => p.Location).ThenInclude(l => l.District)
@@ -189,26 +190,35 @@ namespace olx_be_api.Controllers
                 query = query.Where(p => p.Location.City != null && p.Location.City.Name.ToUpper().Contains(upperCityName));
             }
 
-            var products = await query.Select(p => new ProductResponseDTO
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Description = p.Description ?? string.Empty,
-                Price = p.Price,
-                IsSold = p.IsSold,
-                CreatedAt = p.CreatedAt,
-                CategoryId = p.CategoryId ?? 0,
-                CategoryName = p.Category != null ? p.Category.Name : "N/A",
-                SellerId = p.UserId.ToString(),
-                SellerName = p.User.Name,
-                Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
-                ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
-                ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
-                CityId = p.Location != null && p.Location.City != null ? p.Location.City.Id : null,
-                CityName = p.Location != null && p.Location.City != null ? p.Location.City.Name : null,
-                DistrictId = p.Location != null && p.Location.District != null ? p.Location.District.Id : null,
-                DistrictName = p.Location != null && p.Location.District != null ? p.Location.District.Name : null
-            }).ToListAsync();
+            var products = await _context.Products
+                .Include(p => p.ProductImages)
+                .Include(p => p.User)
+                .Include(p => p.Category)
+                .Include(p => p.Location).ThenInclude(l => l.Province)
+                .Include(p => p.Location).ThenInclude(l => l.City)
+                .Include(p => p.Location).ThenInclude(l => l.District)
+                .Where(p => p.IsActive == true && !p.IsSold)
+                .Select(p => new ProductResponseDTO
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description ?? string.Empty,
+                    Price = p.Price,
+                    IsSold = p.IsSold,
+                    CreatedAt = p.CreatedAt,
+                    CategoryId = p.CategoryId ?? 0,
+                    CategoryName = p.Category != null ? p.Category.Name : "N/A",
+                    SellerId = p.UserId.ToString(),
+                    SellerName = p.User.Name,
+                    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
+                    ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
+                    ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
+                    CityId = p.Location != null && p.Location.City != null ? p.Location.City.Id : null,
+                    CityName = p.Location != null && p.Location.City != null ? p.Location.City.Name : null,
+                    DistrictId = p.Location != null && p.Location.District != null ? p.Location.District.Id : null,
+                    DistrictName = p.Location != null && p.Location.District != null ? p.Location.District.Name : null
+                })
+                .ToListAsync();
 
             return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = $"Search results for '{searchTerm}' retrieved successfully", data = products });
         }
