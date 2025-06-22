@@ -270,7 +270,7 @@ namespace olx_be_api.Controllers
                 return BadRequest(new ApiErrorResponse { success = false, message = "Invalid data", errors = ModelState });
             }
 
-            if (!Guid.TryParse(User .GetUserId().ToString(), out var userId) || await _context.Users.FindAsync(userId) == null)
+            if (!Guid.TryParse(User.GetUserId().ToString(), out var userId) || await _context.Users.FindAsync(userId) == null)
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "User not found." });
             }
@@ -309,7 +309,7 @@ namespace olx_be_api.Controllers
 
                 if (!string.IsNullOrWhiteSpace(locationDetails?.City) && province != null)
                 {
-                    city = await _context.Cities.FirstOrDefaultAsync(c => c.Name.Equals(locationDetails.City, StringComparison.OrdinalIgnoreCase) && c.ProvinceId == province.id);
+                    city = await _context.Cities.FirstOrDefaultAsync(c => c.Name.ToUpper() == locationDetails.City.ToUpper() && c.ProvinceId == province.id);
                     if (city == null)
                     {
                         city = new City { Name = locationDetails.City, ProvinceId = province.id };
@@ -320,7 +320,7 @@ namespace olx_be_api.Controllers
 
                 if (!string.IsNullOrWhiteSpace(locationDetails?.District) && city != null)
                 {
-                    district = await _context.Districts.FirstOrDefaultAsync(d => d.Name.Equals(locationDetails.District, StringComparison.OrdinalIgnoreCase) && d.CityId == city.Id);
+                    district = await _context.Districts.FirstOrDefaultAsync(d => d.Name.ToUpper() == locationDetails.District.ToUpper() && d.CityId == city.Id);
                     if (district == null)
                     {
                         district = new District { Name = locationDetails.District, CityId = city.Id };
