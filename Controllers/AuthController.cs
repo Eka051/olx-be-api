@@ -75,11 +75,12 @@ namespace olx_be_api.Controllers
                     });
                 }
 
-                string authProvider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId ?? "unknown";
                 var user = await _context.Users
                     .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.ProviderUid == uid && u.AuthProvider == authProvider);
+                    .FirstOrDefaultAsync(u => u.Email == firebaseUser.Email);
+
+                string authProvider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId ?? "unknown";
 
                 if (user == null)
                 {
@@ -106,17 +107,14 @@ namespace olx_be_api.Controllers
                 }
                 else
                 {
-                    bool needsUpdate = false;
-                    if (user.Name != firebaseUser.DisplayName) { user.Name = firebaseUser.DisplayName; needsUpdate = true; }
-                    if (user.Email != firebaseUser.Email) { user.Email = firebaseUser.Email; needsUpdate = true; }
-                    if (user.PhoneNumber != firebaseUser.PhoneNumber) { user.PhoneNumber = firebaseUser.PhoneNumber; needsUpdate = true; }
-                    if (user.ProfilePictureUrl != firebaseUser.PhotoUrl) { user.ProfilePictureUrl = firebaseUser.PhotoUrl; needsUpdate = true; }
+                    user.Name = firebaseUser.DisplayName;
+                    user.PhoneNumber = firebaseUser.PhoneNumber;
+                    user.ProfilePictureUrl = firebaseUser.PhotoUrl;
+                    user.AuthProvider = authProvider;
+                    user.ProviderUid = uid;
 
-                    if (needsUpdate)
-                    {
-                        _context.Update(user);
-                        await _context.SaveChangesAsync();
-                    }
+                    _context.Update(user);
+                    await _context.SaveChangesAsync();
                 }
 
                 var token = _jwtHelper.GenerateJwtToken(user);

@@ -109,6 +109,55 @@ namespace olx_be_api.Controllers
             return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = "Products retrieved successfully", data = products });
         }
 
+        [HttpGet("categories/{categoryId}")]
+        [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetProductsByCategory([FromQuery] bool isMyAds = false, [FromQuery] int? categoryId = null)
+        {
+            if (categoryId == null || categoryId <= 0)
+            {
+                return BadRequest(new ApiErrorResponse { success = false, message = "Invalid category ID." });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiErrorResponse { success = false, message = "Invalid request data", errors = ModelState });
+            }
+
+            var products = await _context.Products
+                .Include(p => p.ProductImages)
+                .Include(p => p.User)
+                .Include(p => p.Category)
+                .Include(p => p.Location).ThenInclude(l => l.Province)
+                .Include(p => p.Location).ThenInclude(l => l.City)
+                .Include(p => p.Location).ThenInclude(l => l.District)
+                .Where(p => p.IsActive && !p.IsSold && p.CategoryId == categoryId)
+                .Select(p => new ProductResponseDTO
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description ?? string.Empty,
+                    Price = p.Price,
+                    IsSold = p.IsSold,
+                    CreatedAt = p.CreatedAt,
+                    CategoryId = p.CategoryId ?? 0,
+                    CategoryName = p.Category != null ? p.Category.Name : "N/A",
+                    SellerId = p.UserId.ToString(),
+                    SellerName = p.User.Name,
+                    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
+                    ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
+                    ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
+                    CityId = p.Location != null && p.Location.City != null ? p.Location.City.Id : null,
+                    CityName = p.Location != null && p.Location.City != null ? p.Location.City.Name : null,
+                    DistrictId = p.Location != null && p.Location.District != null ? p.Location.District.Id : null,
+                    DistrictName = p.Location != null && p.Location.District != null ? p.Location.District.Name : null
+                })
+                .ToListAsync();
+            return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = "Products by category retrieved successfully", data = products });
+        }
+
         [HttpGet("search")]
         [ProducesResponseType(typeof(ApiResponse<List<ProductResponseDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
