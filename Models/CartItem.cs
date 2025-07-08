@@ -5,8 +5,8 @@
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
         public int AdPackageId { get; set; }
-        public long ProductId { get; set; }
         public int Quantity { get; set; }
+        public long ProductId { get; set; }
 
         public User User { get; set; } = null!;
         public AdPackage AdPackage { get; set; } = null!;

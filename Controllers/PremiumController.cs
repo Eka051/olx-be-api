@@ -6,6 +6,7 @@ using olx_be_api.Data;
 using olx_be_api.DTO;
 using olx_be_api.Helpers;
 using olx_be_api.Models;
+using System.Security.Claims;
 
 namespace olx_be_api.Controllers
 {
@@ -110,6 +111,82 @@ namespace olx_be_api.Controllers
             });
         }
 
+        [HttpPost("purchase-premium")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<UserPremiumStatusDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PurchasePremium([FromBody] PremiumPurchaseDTO purchaseDto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "ID pengguna tidak valid."
+                });
+            }
+
+            var user = await _context.Users.FindAsync(userGuid);
+            if (user == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Pengguna tidak ditemukan."
+                });
+            }
+
+            var package = await _context.PremiumPackages.FindAsync(purchaseDto.PackageId);
+            if (package == null)
+            {
+                return NotFound(new ApiErrorResponse
+                {
+                    success = false,
+                    message = "Paket premium tidak ditemukan."
+                });
+            }
+
+            DateTime newPremiumUntil;
+            if (user.PremiumUntil != null && user.PremiumUntil > DateTime.UtcNow)
+            {
+                newPremiumUntil = user.PremiumUntil.Value.AddDays(package.DurationDays);
+            }
+            else
+            {
+                newPremiumUntil = DateTime.UtcNow.AddDays(package.DurationDays);
+            }
+
+            user.ProfileType = ProfileType.Premium;
+            user.PremiumUntil = newPremiumUntil;
+
+            var transaction = new Transaction
+            {
+                User = user,
+                Amount = package.Price,
+                Details = $"Premium package purchase: {package.Description}",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+
+            var response = new UserPremiumStatusDTO
+            {
+                IsPremium = true,
+                ProfileType = ProfileType.Premium,
+                PremiumUntil = newPremiumUntil
+            };
+
+            return Ok(new ApiResponse<UserPremiumStatusDTO>
+            {
+                success = true,
+                message = "Berhasil membeli paket premium.",
+                data = response
+            });
+        }
+
         [HttpPut("premium-packages/{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<PremiumPackageResponseDTO>), StatusCodes.Status200OK)]
@@ -196,5 +273,6 @@ namespace olx_be_api.Controllers
 
             return NoContent();
         }
+
     }
 }

@@ -1,6 +1,4 @@
 using API_Manajemen_Barang.Middleware;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -61,7 +59,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = key,
             RoleClaimType = ClaimTypes.Role,
-            ClockSkew = TimeSpan.Zero // Reduce the default clock skew from 5 minutes to 0
+            ClockSkew = TimeSpan.Zero
         };
         
         options.Events = new JwtBearerEvents
@@ -80,7 +78,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
-builder.Services.AddScoped<IDokuService, DokuService>();
 builder.Services.AddScoped<IStorageService, SupabaseStorageService>();
 
 FirebaseAppHelper.Initialize();

@@ -95,6 +95,7 @@ namespace olx_be_api.Controllers
                 Description = p.Description ?? string.Empty,
                 Price = p.Price,
                 IsSold = p.IsSold,
+                IsActive = p.IsActive,
                 CreatedAt = p.CreatedAt,
                 CategoryId = p.CategoryId ?? 0,
                 CategoryName = p.Category != null ? p.Category.Name : "N/A",
@@ -117,9 +118,9 @@ namespace olx_be_api.Controllers
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetProductsByCategory([FromQuery] bool isMyAds = false, [FromQuery] int? categoryId = null)
+        public async Task<IActionResult> GetProductsByCategory(int categoryId, [FromQuery] bool isMyAds = false)
         {
-            if (categoryId == null || categoryId <= 0)
+            if (categoryId <= 0)
             {
                 return BadRequest(new ApiErrorResponse { success = false, message = "Invalid category ID." });
             }
@@ -133,7 +134,6 @@ namespace olx_be_api.Controllers
                 .Include(p => p.ProductImages)
                 .Include(p => p.User)
                 .Include(p => p.Category)
-                .Include(p => p.IsActive != false)
                 .Include(p => p.Location).ThenInclude(l => l.Province)
                 .Include(p => p.Location).ThenInclude(l => l.City)
                 .Include(p => p.Location).ThenInclude(l => l.District)
@@ -190,35 +190,26 @@ namespace olx_be_api.Controllers
                 query = query.Where(p => p.Location.City != null && p.Location.City.Name.ToUpper().Contains(upperCityName));
             }
 
-            var products = await _context.Products
-                .Include(p => p.ProductImages)
-                .Include(p => p.User)
-                .Include(p => p.Category)
-                .Include(p => p.Location).ThenInclude(l => l.Province)
-                .Include(p => p.Location).ThenInclude(l => l.City)
-                .Include(p => p.Location).ThenInclude(l => l.District)
-                .Where(p => p.IsActive == true && !p.IsSold)
-                .Select(p => new ProductResponseDTO
-                {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Description = p.Description ?? string.Empty,
-                    Price = p.Price,
-                    IsSold = p.IsSold,
-                    CreatedAt = p.CreatedAt,
-                    CategoryId = p.CategoryId ?? 0,
-                    CategoryName = p.Category != null ? p.Category.Name : "N/A",
-                    SellerId = p.UserId.ToString(),
-                    SellerName = p.User.Name,
-                    Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
-                    ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
-                    ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
-                    CityId = p.Location != null && p.Location.City != null ? p.Location.City.Id : null,
-                    CityName = p.Location != null && p.Location.City != null ? p.Location.City.Name : null,
-                    DistrictId = p.Location != null && p.Location.District != null ? p.Location.District.Id : null,
-                    DistrictName = p.Location != null && p.Location.District != null ? p.Location.District.Name : null
-                })
-                .ToListAsync();
+            var products = await query.Select(p => new ProductResponseDTO
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description ?? string.Empty,
+                Price = p.Price,
+                IsSold = p.IsSold,
+                CreatedAt = p.CreatedAt,
+                CategoryId = p.CategoryId ?? 0,
+                CategoryName = p.Category != null ? p.Category.Name : "N/A",
+                SellerId = p.UserId.ToString(),
+                SellerName = p.User.Name,
+                Images = p.ProductImages.Select(i => i.ImageUrl).ToList(),
+                ProvinceId = p.Location != null && p.Location.Province != null ? p.Location.Province.id : null,
+                ProvinceName = p.Location != null && p.Location.Province != null ? p.Location.Province.name : null,
+                CityId = p.Location != null && p.Location.City != null ? p.Location.City.Id : null,
+                CityName = p.Location != null && p.Location.City != null ? p.Location.City.Name : null,
+                DistrictId = p.Location != null && p.Location.District != null ? p.Location.District.Id : null,
+                DistrictName = p.Location != null && p.Location.District != null ? p.Location.District.Name : null
+            }).ToListAsync();
 
             return Ok(new ApiResponse<List<ProductResponseDTO>> { success = true, message = $"Search results for '{searchTerm}' retrieved successfully", data = products });
         }
@@ -301,7 +292,7 @@ namespace olx_be_api.Controllers
             try
             {
                 var locationDetails = await _geocodingService.GetLocationDetailsFromCoordinates(productDTO.Latitude, productDTO.Longitude);
-                
+
                 Province? province = null;
                 City? city = null;
                 District? district = null;
@@ -338,7 +329,7 @@ namespace olx_be_api.Controllers
                         await _context.SaveChangesAsync();
                     }
                 }
-                
+
                 var location = new Location
                 {
                     Latitude = productDTO.Latitude,
@@ -417,8 +408,8 @@ namespace olx_be_api.Controllers
                 };
 
                 return CreatedAtAction(
-                    nameof(GetProductById), 
-                    new { id = createdProduct.Id }, 
+                    nameof(GetProductById),
+                    new { id = createdProduct.Id },
                     new ApiResponse<ProductResponseDTO>
                     {
                         success = true,
@@ -448,7 +439,7 @@ namespace olx_be_api.Controllers
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "Invalid user ID." });
             }
-            
+
             var product = await _context.Products
                 .Include(p => p.ProductImages)
                 .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
@@ -507,7 +498,7 @@ namespace olx_be_api.Controllers
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "Invalid user ID." });
             }
-            
+
             var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
 
             if (product == null)
@@ -532,7 +523,7 @@ namespace olx_be_api.Controllers
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "Invalid user ID." });
             }
-            
+
             var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
 
             if (product == null)
@@ -557,7 +548,7 @@ namespace olx_be_api.Controllers
             {
                 return Unauthorized(new ApiErrorResponse { success = false, message = "Invalid user ID." });
             }
-            
+
             var product = await _context.Products
                 .Include(p => p.ProductImages)
                 .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);

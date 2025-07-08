@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using olx_be_api.Models;
 
 namespace olx_be_api.DTO
 {
@@ -9,6 +10,7 @@ namespace olx_be_api.DTO
         public string? Email { get; set; }
         public string? PhoneNumber { get; set; }
         public string? ProfilePictureUrl { get; set; }
+        public ProfileType ProfileType { get; set; } = ProfileType.Regular;
         public DateTime CreatedAt { get; set; }
         public int TotalAds { get; set; }
     }

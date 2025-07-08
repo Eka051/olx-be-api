@@ -24,7 +24,6 @@ namespace olx_be_api.Services
                 return null;
             }
 
-            // Use invariant culture to ensure decimal point (not comma) in URL
             var latStr = lat.ToString(System.Globalization.CultureInfo.InvariantCulture);
             var lngStr = lng.ToString(System.Globalization.CultureInfo.InvariantCulture);
             var url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={latStr},{lngStr}&key={_apiKey}&language=id";
