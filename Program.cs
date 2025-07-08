@@ -9,14 +9,22 @@ using olx_be_api.Hubs;
 using olx_be_api.Services;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IGeocodingService, GoogleGeocodingService>();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddSignalR();
+builder.Services.AddHttpClient<IMidtransService, MidtransService>();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddLogging();
+
 builder.Services.AddSwaggerGen(option =>
 {
     option.SwaggerDoc("v1", new OpenApiInfo { Title = "OLX Backend API", Version = "v1" });
@@ -48,7 +56,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         var keyString = builder.Configuration["Jwt:Key"]!;
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
         key.KeyId = "default-key";
-        
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -61,7 +69,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = ClaimTypes.Role,
             ClockSkew = TimeSpan.Zero
         };
-        
+
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
@@ -78,6 +86,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
+builder.Services.AddScoped<IMidtransService, MidtransService>();
 builder.Services.AddScoped<IStorageService, SupabaseStorageService>();
 
 FirebaseAppHelper.Initialize();
@@ -106,7 +115,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
-        DataSeeder.SeedDatabase(context); 
+        DataSeeder.SeedDatabase(context);
     }
     catch (Exception ex)
     {
@@ -144,4 +153,11 @@ app.UseSwaggerUI(c =>
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
 
-app.Run();
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+app.MapGet("/health", () => "OK");
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+app.Run($"http://0.0.0.0:{port}");
