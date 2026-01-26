@@ -17,6 +17,7 @@
 firebase-adminsdk.json
 appsettings.json
 appsettings.local.json
+.env
 
 # Mono auto generated files
 mono_crash.*

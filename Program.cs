@@ -1,5 +1,6 @@
 using API_Manajemen_Barang.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -48,8 +49,10 @@ builder.Services.AddSwaggerGen(option =>
         }
     });
 });
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -84,30 +87,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+
 builder.Services.AddScoped<IEmailHelper, EmailHelper>();
 builder.Services.AddScoped<JwtHelper>();
 builder.Services.AddScoped<IMidtransService, MidtransService>();
-builder.Services.AddScoped<IStorageService, SupabaseStorageService>();
+builder.Services.AddScoped<IStorageService, ImageKitStorageService>();
 
 FirebaseAppHelper.Initialize();
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        DataSeeder.SeedDatabase(context);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
-        throw;
-    }
-}
 
 using (var scope = app.Services.CreateScope())
 {
@@ -133,13 +121,24 @@ if (args.Contains("seed"))
     return;
 }
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
 app.UseMiddleware<ErrorHandlingMiddleware>();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
 app.UseHttpsRedirection();
-
 app.UseDefaultFiles();
-
 app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -152,12 +151,7 @@ app.UseSwaggerUI(c =>
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-app.MapGet("/health", () => "OK");
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-app.Run($"http://0.0.0.0:{port}");
+app.Run($"https://0.0.0.0:{port}");
