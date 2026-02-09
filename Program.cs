@@ -10,7 +10,11 @@ using olx_be_api.Hubs;
 using olx_be_api.Services;
 using System.Security.Claims;
 using System.Text;
+
 using System.Text.Json.Serialization;
+using DotNetEnv;
+
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -26,7 +26,7 @@ Backend API untuk aplikasi marketplace OLX Clone menggunakan ASP.NET Core 9.0.
 ### 2. Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Eka051/olx-be-api
 cd olx-be-api
 ```
 
@@ -78,6 +78,48 @@ https://localhost:8080/swagger
 - **Chat**: Real-time chat menggunakan SignalR
 - **Payment**: Integrasi Midtrans payment gateway
 - **Maps**: Geocoding menggunakan Google Maps API
+
+## Authentication Guide
+
+The application uses a passwordless authentication system (Email OTP) for both registration and login.
+
+### Registration & Login Flow
+
+1. **Request OTP**
+   - **Endpoint**: `POST /api/auth/email/otp`
+   - **Body**:
+     ```json
+     {
+       "email": "user@example.com"
+     }
+     ```
+   - **Response**: 201 Created. An OTP will be sent to the registered email address.
+
+2. **Verify OTP**
+   - **Endpoint**: `POST /api/auth/email/verify`
+   - **Body**:
+     ```json
+     {
+       "email": "user@example.com",
+       "otp": "123456"
+     }
+     ```
+   - **Response**: Returns a JWT Token.
+     ```json
+     {
+       "success": true,
+       "message": "OTP berhasil diverifikasi",
+       "data": {
+         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+       }
+     }
+     ```
+
+3. **Authentication Header**
+   Include the token in the Authorization header for protected endpoints:
+   ```
+   Authorization: Bearer <your_token>
+   ```
 
 ## Environment Variables
 
