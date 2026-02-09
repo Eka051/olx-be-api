@@ -153,5 +153,5 @@ app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-app.Run($"https://0.0.0.0:{port}");
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8500";
+app.Run($"http://0.0.0.0:{port}");
